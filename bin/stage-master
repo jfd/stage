@@ -124,20 +124,20 @@ MSGH(COP_RESULT,                Job,        "handleResult",    "slave");
 MSGH(COP_TESTERROR,             Job,        "handleTestError", "slave");
 
 
-ROUTE("/info/$",                "GET",      infoHandler);
-ROUTE("/tests/$",               "POST",     installTestHandler);
-ROUTE("/tests/$",               "GET",      listTestsHandler);
-ROUTE("/tests/(.*)/$",          "DELETE",   uninstallTestHandler);
-ROUTE("/tests/(.*)/$",          "GET",      listTestsHandler);
-ROUTE("/jobs/(.*)/$",           "POST",     runTestHandler);
-ROUTE("/jobs/$",                "GET",      listJobsHandler);
-ROUTE("/jobs/(.*)$",            "GET",      getReportHandler);
-ROUTE("/jobs/(.*)/$",           "DELETE",   abortJobHandler);
-ROUTE("/clients/$",             "GET",      listClientsHandler);
-ROUTE("/clients/(slaves)/$",    "GET",      listClientsHandler);
-ROUTE("/$",                     "GET",      staticHandler);
-ROUTE("/(favicon.ico)$",        "GET",      staticHandler);
-ROUTE("/static/(.*)$",          "GET",      staticHandler);
+ROUTE("/info/$",                "GET",      handleInfo);
+ROUTE("/tests/$",               "POST",     handleInstallTest);
+ROUTE("/tests/$",               "GET",      handleListTests);
+ROUTE("/tests/(.*)/$",          "DELETE",   handleUninstallTest);
+ROUTE("/tests/(.*)/$",          "GET",      handleListTests);
+ROUTE("/jobs/(.*)/$",           "POST",     handleRunTest);
+ROUTE("/jobs/$",                "GET",      handleListJobs);
+ROUTE("/jobs/(.*)$",            "GET",      handleGetReport);
+ROUTE("/jobs/(.*)/$",           "DELETE",   handleAbortJob);
+ROUTE("/clients/$",             "GET",      handleListClients);
+ROUTE("/clients/(slaves)/$",    "GET",      handleListClients);
+ROUTE("/$",                     "GET",      handleStatic);
+ROUTE("/(favicon.ico)$",        "GET",      handleStatic);
+ROUTE("/static/(.*)$",          "GET",      handleStatic);
 
 
 LOGHANDLER(LOG_FATAL,           logServerError);
@@ -555,7 +555,7 @@ function sockDestroyImpl () {
 }
 
 
-function infoHandler (req, res) {
+function handleInfo (req, res) {
   var context;
 
   context = {
@@ -566,7 +566,7 @@ function infoHandler (req, res) {
 }
 
 
-function listTestsHandler (req, res, expr) {
+function handleListTests (req, res, expr) {
   var root = options.cachepath;
   var result = [];
   var regex;
@@ -600,7 +600,7 @@ function listTestsHandler (req, res, expr) {
 }
 
 
-function installTestHandler (req, res, expr, url) {
+function handleInstallTest (req, res, expr, url) {
   var buffers = [];
 
   equal(req.headers["content-type"], "application/octet-stream");
@@ -653,7 +653,7 @@ function installTestHandler (req, res, expr, url) {
 }
 
 
-function uninstallTestHandler (req, res, expr) {
+function handleUninstallTest (req, res, expr) {
   var root = options.cachepath;
   var regex;
   var count = 0;
@@ -696,7 +696,7 @@ function uninstallTestHandler (req, res, expr) {
 }
 
 
-function runTestHandler (req, res, expr, url) {
+function handleRunTest (req, res, expr, url) {
   var root = options.cachepath;
   var filename;
   var data = "";
@@ -740,12 +740,12 @@ function runTestHandler (req, res, expr, url) {
 }
 
 
-function listJobsHandler (req, res) {
+function handleListJobs (req, res) {
   writeJsonResponse(res, Job.all);
 }
 
 
-function abortJobHandler (req, res, expr) {
+function handleAbortJob (req, res, expr) {
   var data;
   var job;
 
@@ -765,7 +765,7 @@ function abortJobHandler (req, res, expr) {
 }
 
 
-function listClientsHandler (req, res, expr) {
+function handleListClients (req, res, expr) {
   var result;
 
   switch (expr && expr[1]) {
@@ -783,7 +783,7 @@ function listClientsHandler (req, res, expr) {
 }
 
 
-function getReportHandler (req, res, expr) {
+function handleGetReport (req, res, expr) {
   var data;
   var job;
   var report;
@@ -800,7 +800,7 @@ function getReportHandler (req, res, expr) {
 }
 
 
-function staticHandler (req, res, expr) {
+function handleStatic (req, res, expr) {
   var path;
 
   path = join(DASHBOARD_BASE, expr[1] ? expr[1] : "index.html");
