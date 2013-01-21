@@ -6,6 +6,12 @@
   "bin": {
     "stage": "./bin/stage"
   },
+  "keywords": [
+    "test",
+    "testing",
+    "stage",
+    "distributed"
+  ],
   "man": [
     "man/abort.1",
     "man/clients.1",
