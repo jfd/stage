@@ -1,0 +1,90 @@
+#!/usr/bin/env node
+
+"use strict";
+
+var abortJob                  = require("../lib/api").abortJob;
+
+var version                   = require("../lib/cliutil").version;
+var usage                     = require("../lib/cliutil").usage;
+var help                      = require("../lib/cliutil").help;
+var halt                      = require("../lib/cliutil").halt;
+var url                       = require("../lib/cliutil").url;
+var toHttpUrl                 = require("../lib/cliutil").toHttpUrl;
+
+var consts                    = require("../lib/consts");
+
+
+var DEFAULT_OPTIONS           = { "url"         : consts.DEFAULT_URL,
+                                  "json"        : false,
+                                  "id"          : null
+                                };
+
+
+var options                   = Object.create(DEFAULT_OPTIONS);
+
+
+function main () {
+  var args = process.argv.slice(2);
+  var arg;
+
+
+  while ((arg = args.shift())) {
+    switch (arg) {
+
+      case "-v":
+      case "--version":
+      return version();
+
+      case "--usage":
+      return usage("<jobid>");
+
+      case "--help":
+      return help();
+
+      case "--url":
+      case "--hostname":
+      case "--port":
+      case "--token":
+      case "--secure":      
+      options.url = url(options.url, arg, args.shift());
+      break;
+
+      case "--json":
+      options.json = true;
+      break;
+
+      default:
+
+      if (arg[0] == "-") {
+        halt("unknown option " + arg);
+      }
+
+      options.id = parseInt(arg, 10);
+      break;
+    }
+  }
+
+  options.url = toHttpUrl(options.url);
+
+  if (!options.id || isNaN(options.id)) {
+    halt("expected <jobid>");
+  }
+
+  abortJob(options.url, options.id, function (err, result) {
+    if (err) {
+      halt(err);
+    }
+
+    if (options.json) {
+      process.stdout.write(JSON.stringify(result));
+      return;
+    }
+
+    console.log("Job #%s was aborted succesfully", result.id);
+  });
+}
+
+
+if (process.argv[1] == __filename) {
+  main();
+}

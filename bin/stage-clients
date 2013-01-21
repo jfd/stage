@@ -1,0 +1,87 @@
+#!/usr/bin/env node
+
+"use strict";
+
+var version                   = require("../lib/cliutil").version;
+var usage                     = require("../lib/cliutil").usage;
+var help                      = require("../lib/cliutil").help;
+var halt                      = require("../lib/cliutil").halt;
+var url                       = require("../lib/cliutil").url;
+var toHttpUrl                 = require("../lib/cliutil").toHttpUrl;
+
+var listClients               = require("../lib/api").listClients;
+
+var consts                    = require("../lib/consts");
+
+
+var DEFAULT_OPTIONS           = { "url"         : consts.DEFAULT_URL,
+                                  "json"        : false
+                                };
+
+
+var options                   = Object.create(DEFAULT_OPTIONS);
+
+
+function main () {
+  var args = process.argv.slice(2);
+  var arg;
+
+
+  while ((arg = args.shift())) {
+    switch (arg) {
+
+      case "--usage":
+      return usage();
+
+      case "--help":
+      return help();
+
+      case "-v":
+      case "--version":
+      return version();
+
+      case "--url":
+      case "--hostname":
+      case "--port":
+      case "--token":
+      case "--secure":            
+      options.url = url(options.url, arg, args.shift());
+      break;
+
+      case "--json":
+      options.json = true;
+      break;
+
+      default:
+      return halt("bad argument - " + arg);
+    }
+  }
+
+  options.url = toHttpUrl(options.url);
+
+  listClients(options.url, function (err, result) {
+    if (err) {
+      halt(err.message);
+    }
+
+    if (options.json) {
+      return console.log(JSON.stringify(result));
+    }
+
+    console.log("total %s", result.length);
+
+    result.forEach(function (c) {
+      console.log("#%s - %s - %s:%s",
+                  c.id,
+                  c.role.toUpperCase(),
+                  c.remoteAddress,
+                  c.remotePort
+                 );
+    });
+  });
+}
+
+
+if (process.argv[1] == __filename) {
+  main();
+}

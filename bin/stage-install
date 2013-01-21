@@ -1,0 +1,162 @@
+#!/usr/bin/env node
+
+"use strict";
+
+var statSync                  = require("fs").statSync;
+var readFileSync              = require("fs").readFileSync;
+var existsSync                = require("fs").existsSync;
+
+var parseUrl                  = require("url").parse;
+
+var resolve                   = require("path").resolve;
+var join                      = require("path").join;
+
+var spawn                     = require("child_process").spawn;
+
+var version                   = require("../lib/cliutil").version;
+var usage                     = require("../lib/cliutil").usage;
+var help                      = require("../lib/cliutil").help;
+var halt                      = require("../lib/cliutil").halt;
+var url                       = require("../lib/cliutil").url;
+var toHttpUrl                 = require("../lib/cliutil").toHttpUrl;
+
+var prepareRequest            = require("../lib/api").prepareRequest;
+
+
+var consts                    = require("../lib/consts");
+
+
+var DEFAULT_OPTIONS           = { "url"         : consts.DEFAULT_URL,
+                                  "force"       : false,
+                                  "target"      : null
+                                };
+
+var options                   = Object.create(DEFAULT_OPTIONS);
+
+
+function main () {
+  var args = process.argv.slice(2);
+  var arg;
+  var tmpurl; 
+  var pkg;
+
+
+  while ((arg = args.shift())) {
+    switch (arg) {
+
+      case "-v":
+      case "--version":
+      return version();
+
+      case "--usage":
+      return usage("<path>");
+
+      case "--help":
+      return help();
+
+      case "--url":
+      case "--hostname":
+      case "--port":
+      case "--token":
+      case "--secure":      
+      options.url = url(options.url, arg, args.shift());
+      break;
+      
+      case "--force":
+      options.url = url(options.url, arg, "1");
+      break;
+
+      default:
+
+      if (arg[0] == "-") {
+        halt("unknown option " + arg);
+      }
+
+      options.target = resolve(arg);
+      break;
+    }
+  }
+
+  options.url = toHttpUrl(options.url);
+
+  if (existsSync(options.target) == false ||
+      statSync(options.target).isDirectory() == false) {
+    halt("<path> must be a directory");
+  }
+
+  pkg = readFileSync(resolve(options.target, "package.json"));
+  pkg = JSON.parse(pkg);
+
+  if ("name" in pkg == false) {
+    halt("File '<path>/package.json' must contain the 'name' field");
+  }
+
+  if ("version" in pkg == false) {
+    halt("File '<path>/package.json' must contain the 'version' field");
+  }
+
+  if ("scripts" in pkg == false ||
+      ("stagetest" in pkg.scripts == false && "test" in pkg.scripts == false)) {
+    halt("Package <path> must contain either a 'stagetest' or a 'test' script");
+  }
+
+  install(options.target, options.url, function (err, result) {
+    if (err) {
+      halt(err.message);
+    }
+
+    console.log("Package '%s' was installed successfully", result.id);
+  });
+}
+
+
+function install (path, url, C) {
+  var child;
+  var opts;
+  var stderr;
+  var req;
+
+  opts = {
+    method        : "POST",
+    url           : url,
+    path          : "tests",
+    json          : true
+  };
+
+  req = prepareRequest(opts, function (err, result) {
+    child.kill("SIGKILL");
+    return C(err, result);
+  });
+
+  req.setHeader("Content-Type", "application/octet-stream");
+  req.setHeader("Transfer-Encoding", "chunked");
+
+  child = spawn("tar", ["-c", "."], { cwd: path });
+  child.stdout.pipe(req);
+
+  stderr = [];
+
+  child.stderr.on("data", function (chunk) {
+    stderr.push(chunk);
+  });
+
+  child.on("error", function (err) {
+    req.abort();
+    return C(err);
+  });
+
+  child.on("exit", function (code) {
+    var arg;
+
+    if (code) {
+      arg = Buffer.concat(stderr).toString();
+      req.abort();
+      return C(new Error(arg));
+    }
+  });
+}
+
+
+if (process.argv[1] == __filename) {
+  main();
+}

@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <title>Stage Dashboard</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <link href="/static/bootstrap.min.css" rel="stylesheet">
+    <style>
+      body {
+        padding-top: 60px;
+      }
+    </style>
+  </head>
+
+  <body>
+
+    <div class="navbar navbar-inverse navbar-fixed-top">
+      <div class="navbar-inner">
+        <div class="container">
+          <a class="btn btn-navbar" data-toggle="collapse" data-target=".nav-collapse">
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+          </a>
+          <a class="brand" href="#">Stage Dashboard</a>
+          <div class="nav-collapse collapse">
+            <ul class="nav">
+              <li class="active"><a href="#">Home</a></li>
+<!--              <li><a href="#tests">Tests</a></li>
+              <li><a href="#jobs">Jobs</a></li>
+              <li><a href="#clients">Clients</a></li>-->
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="container">
+
+      <div class="alert alert-info">
+        Your installation of Stage is now fully operational
+      </div>
+
+      <h1>Stage Master running on <span class="host"></span></h1>
+
+      <p>Stage version <span class="stage-version">0.0.0</span></p>
+    </div>
+
+    <script src="/static/dashboard.js"></script>
+
+  </body>
+</html>

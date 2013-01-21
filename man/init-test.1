@@ -1,0 +1,92 @@
+.\" Generated with Ronnjs 0.3.8
+.\" http://github.com/kapouer/ronnjs/
+.
+.TH "STAGE\-INIT\-TEST" "1" "January 2013" "" ""
+.
+.SH "NAME"
+\fBstage-init-test\fR \-\- Initializes test
+.
+.SH "SYNOPSIS"
+.
+.nf
+stage\-init\-test [options] <path>
+.
+.fi
+.
+.SH "DESCRIPTION"
+Aborts a currently running job on all Slave machines\.
+.
+.SH "OPTIONS"
+Available options for command:
+.
+.IP "\(bu" 4
+\fB\-v\fR, \fB\-\-version\fR:
+.
+.br
+Shows current version of the command, then exit
+.
+.IP "\(bu" 4
+\fB\-\-help\fR:
+.
+.br
+Shows the manual page entry for command
+.
+.IP "\(bu" 4
+\fB\-\-usage\fR:
+.
+.br
+Show command usage, then exit
+.
+.IP "\(bu" 4
+\fB\-\-force\fR:
+.
+.br
+Force init, even if files exists\.
+.
+.IP "\(bu" 4
+\fB\-\-package\-author <author>\fR:
+.
+.br
+Name of the author of test package\.
+.
+.IP "\(bu" 4
+\fB\-\-package\-name <name>\fR: 
+Name of the test package\.
+.
+.IP "\(bu" 4
+\fB\-\-package\-version <version>\fR: 
+Version of the test package\.
+.
+.IP "" 0
+.
+.SH "EXAMPLES"
+Initializes a test in path \fImytest\fR:
+.
+.IP "" 4
+.
+.nf
+stage\-init\-test mytest
+.
+.fi
+.
+.IP "" 0
+.
+.SH "ENVIRONMENT VARIABLES"
+The following enivornment variables are used by command:
+.
+.P
+  \fISTAGE_AUTHOR\fR
+.
+.br
+  The name of the author
+.
+.SH "COPYRIGHT"
+Copyright (C) 2013 Johan Dahlberg \fIhttp://jfd\.github\.com\fR
+.
+.SH "SEE ALSO"
+.
+.IP "\(bu" 4
+stage(1)
+.
+.IP "" 0
+

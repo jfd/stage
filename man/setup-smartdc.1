@@ -1,0 +1,183 @@
+.\" Generated with Ronnjs 0.3.8
+.\" http://github.com/kapouer/ronnjs/
+.
+.TH "STAGE\-SETUP\-SMARTDC" "1" "January 2013" "" ""
+.
+.SH "NAME"
+\fBstage-setup-smartdc\fR \-\- Installs dependencies on a remote machine via SSH\.
+.
+.SH "SYNOPSIS"
+.
+.nf
+stage\-setup\-smatdc [options] <master|slave>
+.
+.fi
+.
+.SH "DESCRIPTION"
+Creates a new machine (or machines) on Joyent SmartDC and then installs \fIstage\fR with depencencies via SSH\.
+.
+.SH "OPTIONS"
+Available options for command:
+.
+.IP "\(bu" 4
+\fB\-v\fR, \fB\-\-version\fR:
+.
+.br
+Shows current version of the command, then exit
+.
+.IP "\(bu" 4
+\fB\-\-help\fR:
+.
+.br
+Shows the manual page entry for command
+.
+.IP "\(bu" 4
+\fB\-\-usage\fR:
+.
+.br
+Show command usage, then exit
+.
+.IP "\(bu" 4
+\fB\-\-quiet\fR:
+.
+.br
+Do not print any information\.
+.
+.IP "\(bu" 4
+\fB\-\-silent\fR:
+.
+.br
+See \fI\-\-quiet\fR
+.
+.IP "\(bu" 4
+\fB\-\-debug\fR:
+.
+.br
+More verbose output
+.
+.IP "\(bu" 4
+\fB\-\-reconnect\-attempts <attempts>\fR:
+.
+.br
+Number of reconnect attempts\. Defaults to 50
+.
+.IP "\(bu" 4
+\fB\-\-remote\-port <port>\fR:
+.
+.br
+The \fIport\fR in which the target machine(s) should listen for public connections\. This option is only valid if target is \fI<master>\fR
+.
+.IP "\(bu" 4
+\fB\-\-remote\-loglevel <silent|fatal|warn|info|verb|debug>\fR:
+.
+.br
+The \fIloglevel\fR for the remote target machine(s)\. This option is only valid if target is \fI<master>\fR
+.
+.IP "\(bu" 4
+\fB\-\-remote\-maxjobs <number>\fR:
+.
+.br
+Maximum number of simultaneously running jobs  which the target machine(s) should work on\. This option is only valid if target is \fI<master>\fR
+.
+.IP "\(bu" 4
+\fB\-\-remote\-token <token>\fR:
+.
+.br
+The \fItoken\fR for the target machine(s)\. This option is only valid if target is \fI<master>\fR
+.
+.IP "\(bu" 4
+\fB\-\-remote\-url <url>\fR:
+.
+.br
+The \fIurl\fR in which the target machine(s) should connect to\. This option is only valid if target is \fI<slave>\fR
+.
+.IP "\(bu" 4
+\fB\-\-sdcurl <url>\fR:
+.
+.br
+The \fIURL\fR for the Joyent API (e\.g\. https://us\-sw\-1\.api\.joyentcloud\.com/)
+.
+.IP "\(bu" 4
+\fB\-\-account <account>\fR:
+.
+.br
+Joyent account name
+.
+.IP "\(bu" 4
+\fB\-\-keyid <keyid>\fR:
+.
+.br
+Key name of the SSH/RSA Key associated with your Joyent account
+.
+.IP "\(bu" 4
+\fB\-\-account <account>\fR:
+.
+.br
+Path to the SSH/RSA key associated with your Joyent account
+.
+.IP "" 0
+.
+.SH "EXAMPLES"
+Creates a new machine on Joyent SmartDC and then install and starts a Master Server:
+.
+.IP "" 4
+.
+.nf
+stage\-setup\-smartdc master
+.
+.fi
+.
+.IP "" 0
+.
+.P
+Creates five new Joyent SmartDC machines and then installs Stage Slave Server on them:
+.
+.IP "" 4
+.
+.nf
+stage\-setup\-smartdc slave \-\-no\-of\-machines 5
+.
+.fi
+.
+.IP "" 0
+.
+.SH "ENVIRONMENT VARIABLES"
+The following enivornment variables are used by command:
+.
+.P
+  \fISDC_CLI_URL\fR
+.
+.br
+  The \fIURL\fR for the Joyent API (e\.g\. https://us\-sw\-1\.api\.joyentcloud\.com/)
+.
+.P
+  \fISDC_CLI_ACCOUNT\fR
+.
+.br
+  Joyent account name
+.
+.P
+  \fISDC_CLI_KEY_ID\fR
+.
+.br
+  Key name of the SSH/RSA Key associated with your Joyent account
+.
+.P
+  \fISDC_CLI_IDENTITY\fR
+.
+.br
+  Path to the SSH/RSA key associated with your Joyent account
+.
+.SH "COPYRIGHT"
+Copyright (C) 2013 Johan Dahlberg \fIhttp://jfd\.github\.com\fR
+.
+.SH "SEE ALSO"
+.
+.IP "\(bu" 4
+stage(1)
+.
+.IP "\(bu" 4
+stage\-setup\-machine(1)
+.
+.IP "" 0
+

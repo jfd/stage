@@ -1,0 +1,33 @@
+{
+  "author": "Johan Dahlberg <dahlberg.johan@gmail.com> (jfd.github.com)",
+  "name": "stage",
+  "description": "Distributed testing for Node.js",
+  "version": "0.7.0",
+  "bin": {
+    "stage": "./bin/stage"
+  },
+  "man": [
+    "man/abort.1",
+    "man/clients.1",
+    "man/collect.1",
+    "man/install.1",
+    "man/jobs.1",
+    "man/master.1",
+    "man/run.1",
+    "man/slave.1",
+    "man/stage.1",
+    "man/tests.1",
+    "man/uninstall.1",
+
+    "man/setup-machine.1",
+    "man/setup-smartdc.1"
+  ],
+  "dependencies": {
+		"ws": "~0.4.22",
+    "temporary": "~0.0.5",
+    "forever": "~0.10.0"
+  },
+  "engines": {
+    "node": ">=0.7.7"
+  }
+}

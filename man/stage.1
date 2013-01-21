@@ -1,0 +1,218 @@
+.\" Generated with Ronnjs 0.3.8
+.\" http://github.com/kapouer/ronnjs/
+.
+.TH "STAGE" "1" "January 2013" "" ""
+.
+.SH "NAME"
+\fBstage\fR \-\- Distributed Testing Suite
+.
+.SH "SYNOPSIS"
+.
+.nf
+stage <command>
+.
+.fi
+.
+.SH "DESCRIPTION"
+Stage is a distributed testing suite for Node\.js\. The main goal is to provide a test suite that can help with network related test cases such as load balancing and performance testing\.
+.
+.P
+Stage includes tools for setting up test networks (via SSH or Joyent SmartDC), distribute and running test and collecting results\.
+.
+.SH "OPTIONS"
+Available options for command:
+.
+.IP "\(bu" 4
+\fB\-v\fR, \fB\-\-version\fR:
+.
+.br
+Shows current version of the command, then exit
+.
+.IP "\(bu" 4
+\fB\-\-help\fR:
+.
+.br
+Shows the manual page entry for command
+.
+.IP "\(bu" 4
+\fB\-\-usage\fR:
+.
+.br
+Show command usage, then exit
+.
+.IP "" 0
+.
+.SH "Commands"
+Stage comes with a great set of commands and utilities\. The commands are divided into two categories, base commands (aslo known as \fImaster server commands\fR) and utility commands (also known as \fIextras\fR)\.
+.
+.P
+The Master Server commands talkes directly to specified Stage Master Server while the \fIextras\fR contains commands more suited for maintainence and setup\. 
+.
+.P
+A developer can also extend the list with more \fIextras\fR commands by specify one or more paths via the environmental variable *STAGE\fIEXTRAS\fRPATH*\. If set, Stage search all specified paths for executables that starts with "stage\-"\.
+.
+.SS "Base commands"
+.
+.IP "\(bu" 4
+\fBstage\-abort\fR:
+.
+.br
+Aborts a currently running test
+.
+.IP "\(bu" 4
+\fBstage\-clients\fR:
+.
+.br
+List available clients (slaves and monitors) on master process
+.
+.IP "\(bu" 4
+\fBstage\-collect\fR:
+.
+.br
+Get\'s report for specifed test
+.
+.IP "\(bu" 4
+\fBstage\-install\fR:
+.
+.br
+Installs a test package on master process
+.
+.IP "\(bu" 4
+\fBstage\-jobs\fR:
+.
+.br
+List all running and finished jobs on master process
+.
+.IP "\(bu" 4
+\fBstage\-master\fR:
+.
+.br
+Spawns a master server process
+.
+.IP "\(bu" 4
+\fBstage\-run\fR:
+.
+.br
+Runs a test package on master process
+.
+.IP "\(bu" 4
+\fBstage\-slave\fR:
+.
+.br
+Spawns a slave server process
+.
+.IP "\(bu" 4
+\fBstage\-tests\fR:
+.
+.br
+List all available test packages on master process
+.
+.IP "\(bu" 4
+\fBstage\-uninstall\fR:
+.
+.br
+Uninstalls a test package on master process
+.
+.IP "" 0
+.
+.SS "Built\-in Extras"
+.
+.IP "\(bu" 4
+\fBstage\-init\-test\fR:
+.
+.br
+Initializes a test template\.
+.
+.IP "\(bu" 4
+\fBstage\-setup\-machine\fR:
+.
+.br
+Installs dependencies for a master or slave server on a remote machine via SSH\.
+.
+.IP "\(bu" 4
+\fBstage\-setup\-smartdc\fR:
+.
+.br
+Creates and installs dependencies for a master or slave on a SmartDC machine\.
+.
+.IP "" 0
+.
+.SH "EXAMPLES"
+Shows current version of Stage:
+.
+.IP "" 4
+.
+.nf
+stage \-\-version
+.
+.fi
+.
+.IP "" 0
+.
+.P
+Executes the command \fBstage\-abort\fR:
+.
+.IP "" 4
+.
+.nf
+stage abort 1
+.
+.fi
+.
+.IP "" 0
+.
+.SH "ENVIRONMENT VARIABLES"
+The following enivornment variables are used by command:
+.
+.P
+  \fISTAGE_EXTRAS_PATH\fR
+.
+.br
+  One or more paths where to search for extras\.
+.
+.SH "COPYRIGHT"
+Copyright (C) 2013 Johan Dahlberg \fIhttp://jfd\.github\.com\fR
+.
+.SH "SEE ALSO"
+.
+.IP "\(bu" 4
+stage\-abort(1)
+.
+.IP "\(bu" 4
+stage\-clients(1)
+.
+.IP "\(bu" 4
+stage\-collect(1)
+.
+.IP "\(bu" 4
+stage\-init\-test(1)
+.
+.IP "\(bu" 4
+stage\-install(1)
+.
+.IP "\(bu" 4
+stage\-jobs(1)
+.
+.IP "\(bu" 4
+stage\-master(1)
+.
+.IP "\(bu" 4
+stage\-run(1)
+.
+.IP "\(bu" 4
+stage\-setup\-machine(1)
+.
+.IP "\(bu" 4
+stage\-setup\-smartdc(1)
+.
+.IP "\(bu" 4
+stage\-slave(1)
+.
+.IP "\(bu" 4
+stage\-tests(1)
+.
+.IP "\(bu" 4
+stage\-uninstall(1)
+.
+.IP "" 0
+

@@ -1,0 +1,329 @@
+#!/usr/bin/env node
+
+"use strict";
+
+var exec                      = require("child_process").exec;
+
+var readFileSync              = require("fs").readFileSync;
+
+var resolve                   = require("path").resolve;
+
+var format                    = require("util").format;
+
+var version                   = require("../lib/cliutil").version;
+var usage                     = require("../lib/cliutil").usage;
+var help                      = require("../lib/cliutil").help;
+var halt                      = require("../lib/cliutil").halt;
+var url                       = require("../lib/cliutil").url;
+
+var consts                    = require("../lib/consts");
+
+
+var SETUP_MACHINE_CMD         = resolve(__dirname, "./stage-setup-machine");
+
+var DEFAULT_OPTIONS           = { "machines"    : 1,
+                                  "type"        : null,
+                                  "json"        : false,
+                                  "rurl"        : null,
+                                  "rport"       : 8080,
+                                  "rloglevel"   : null,
+                                  "rtoken"      : null,
+                                  "rmaxjobs"    : null,
+                                  "sdcUrl"      : process.env["SDC_CLI_URL"],
+                                  "sdcAccount"  : process.env["SDC_CLI_ACCOUNT"],
+                                  "sdcKeyId"    : process.env["SDC_CLI_KEY_ID"],
+                                  "sdcIdentity" : process.env["SDC_CLI_IDENTITY"],
+                                  "quiet"       : false,
+                                  "debug"       : true
+                                };
+
+
+var options                   = Object.create(DEFAULT_OPTIONS);
+
+
+function main () {
+  var args = process.argv.slice(2);
+  var arg;
+
+  while ((arg = args.shift())) {
+    switch (arg) {
+
+      case "-v":
+      case "--version":
+      return version();
+
+      case "--usage":
+      return usage("<master|slave>");
+
+      case "--help":
+      return help();
+
+      case "--silent":
+      case "--quiet":
+      options.quiet = true;
+      break;
+
+      case "--debug":
+      options.debug = true;
+      break;
+
+      case "--no-of-machines":
+      options.machines = parseInt(args.shift());
+      break;
+
+      case "--remote-url":
+      options.rurl = args.shift();
+      break;
+
+      case "--remote-port":
+      options.rport = parseInt(args.shift());
+      break;
+
+      case "--remote-loglevel":
+      options.rloglevel = parseInt(args.shift());
+      break;
+
+      case "--remote-maxjobs":
+      options.rmaxjobs = parseInt(args.shift());
+      break;
+
+      case "--remote-token":
+      options.rtoken = args.shift();
+      break;
+
+      // SDC specific options
+      case "--sdcurl":
+      options.sdcUrl = args.shift();
+      break;
+
+      case "--account":
+      options.sdcAccount = args.shift();
+      break;
+
+      case "--keyid":
+      options.sdcKeyId = args.shift();
+      break;
+
+      case "--identity":
+      options.sdcIdentity = args.shift();
+      break;
+
+      default:
+
+      if (arg[0] == "-") {
+        halt("unknown option " + arg);
+      }
+
+      options.type = arg;
+      break;
+    }
+  }
+
+  try {
+    require.resolve("smartdc");
+  } catch (err) {
+    halt("smartdc module is missing\nInstall smartdc by issuing the command:" +
+         "\n\n  npm install smartdc -g\n");
+  }
+
+  if ("SDC_CLI_URL" in process.env == false) {
+    if (!options.sdcUrl) {
+      halt("expected --sdcurl or environment variable SDC_CLI_URL");
+    }
+    process.env["SDC_CLI_URL"] = options.sdcUrl;
+  }
+
+  if ("SDC_CLI_ACCOUNT" in process.env == false) {
+    if (!options.sdcAccount) {
+      halt("expected --account or environment variable SDC_CLI_ACCOUNT");
+    }
+    process.env["SDC_CLI_ACCOUNT"] = options.sdcAccount;
+  }
+
+  if ("SDC_CLI_KEY_ID" in process.env == false) {
+    if (!options.sdcKeyId) {
+      halt("expected --keyId or environment variable SDC_CLI_KEY_ID");
+    }
+    process.env["SDC_CLI_KEY_ID"] = options.sdcKeyId;
+  }
+
+  if ("SDC_CLI_IDENTITY" in process.env == false) {
+    if (!options.sdcIdentity) {
+      halt("expected --identity or environment variable SDC_CLI_IDENTITY");
+    }
+    process.env["SDC_CLI_IDENTITY"] = options.sdcIdentity;
+  }
+
+  if (options.type === null || /^slave|^master/.test(options.type) == false) {
+    halt("expected <type> of machine. Valid types are 'master' or 'slave'");
+  }
+
+  if (options.rport !== null && isNaN(options.rport) && options.rport >= 0) {
+    halt("--remote-port must be a positive number");
+  }
+
+  if (options.type == "slave" && options.rurl === null) {
+    halt("--remote-url must be set for slaves");
+  }
+
+  if (options.type == "slave" && /^ws/.test(options.rurl) == false) {
+    halt("Protocol for --remote-url must be either ws: or wss:");
+  }
+
+  if (options.rmaxjobs !== null &&
+      isNaN(options.rmaxjobs) &&
+      options.rmaxjobs >= 0) {
+    halt("--remote-port must be a positive number");
+  }
+
+  if (isNaN(options.machines) ||
+      options.machines < 1 ||
+      options.machines > 25) {
+    halt("--no-of-machines must be a number over 1 and under 26");
+  }
+
+
+  function onmachinescreated (err, result) {
+
+    if (err) {
+      halt(err.message || err.stack);
+    }
+
+    if (options.json) {
+      console.log(JSON.stringify(result));
+    } else {
+      if (result.machines.length > 1) {
+        log("%s machines was successfully created:", result.machines.length);
+        result.machines.forEach(function (m, idx) {
+          log("Machine %s: http://%s:%s", idx, m.address, m.port);
+        });
+      }
+    }
+    
+    process.exit(0);
+  }
+
+  createAndSetupMachines(options.machines, onmachinescreated);
+}
+
+
+function log () {
+  if (options.quiet == false) {
+    process.stdout.write(format.apply(null, arguments) + "\n");
+  }
+}
+
+
+function debug () {
+  if (options.quiet == false && options.debug) {
+    process.stdout.write(format.apply(null, arguments) + "\n");
+  }
+}
+
+
+function createAndSetupMachines (count, C) {
+  var result = { "machines": [] };
+
+  log("Creating %s machine(s)...", count);
+
+  (function next (count) {
+    var info;
+
+    function oncreated (err, info) {
+      var addr;
+      var user;
+      var pass;
+      var args;
+      var child;
+      var cmd;
+
+      if (err) return C(err);
+
+      addr = info.primaryIp;
+      user = "admin";
+      pass = info.metadata.credentials.admin;
+
+      log("Machine '%s' (ip: %s) was created...", info.id, addr);
+
+      cmd = SETUP_MACHINE_CMD + " " + options.type;
+      args = [];
+
+      if (options.rloglevel) {
+        args.push("--remote-loglevel", options.rloglevel);
+      }
+
+      if (options.rport) {
+        args.push("--remote-port", options.rport);
+      }
+
+      if (options.rurl) {
+        args.push("--remote-url", options.rurl);
+      }
+
+      if (options.rmaxjobs) {
+        args.push("--remote-maxjobs", options.rmaxjobs);
+      }
+
+      if (options.rtoken) {
+        args.push("--remote-token", options.rtoken);
+      }
+
+      if (options.debug) {
+        args.push("--debug");
+      }
+
+      if (options.quiet) {
+        args.push("--quiet");
+      }
+
+      info = {
+        address     : addr,
+        username    : user,
+        password    : pass,
+        port        : options.rport
+      };
+
+      args.push('"' + user + ":" + pass + "@" + addr + '"');
+
+      cmd += " " + args.join(" ");
+
+      debug("Executing setup command " + cmd);
+
+      child = exec(cmd, onsetupdone);
+      child.stdout.pipe(process.stdout);
+      child.stderr.pipe(process.stderr);
+    }
+
+    function onsetupdone (err) {
+      if (err) return C(err);
+      result.machines.push(info);
+      if (count) next(count - 1);
+      return C(null, result);
+    }
+
+    exec("sdc-createmachine", getJsonOutput(oncreated));
+
+  })(count);
+}
+
+
+
+function getJsonOutput (C) {
+  return function (err, stdout, stderr) {
+    var graph;
+    if (err) {
+      return C(new Error(stderr));
+    }
+    try {
+      graph = JSON.parse(stdout);
+    } catch (err) {
+      return C(err);
+    }
+    return C(null, graph);
+  };
+}
+
+
+if (process.argv[1] == __filename) {
+  main();
+}

@@ -1,0 +1,1498 @@
+#!/usr/bin/env node
+
+"use strict";
+
+var ok                        = require("assert").ok;
+var equal                     = require("assert").equal;
+var notEqual                  = require("assert").notEqual;
+
+var exec                      = require("child_process").exec;
+var spawn                     = require("child_process").spawn;
+
+var createDomain              = require("domain").create;
+
+var EventEmitter              = require("events").EventEmitter;
+
+var statSync                  = require("fs").statSync;
+var stat                      = require("fs").stat;
+var readdir                   = require("fs").readdir;
+var readFile                  = require("fs").readFile;
+var readFileSync              = require("fs").readFileSync;
+var writeFile                 = require("fs").writeFile;
+var exists                    = require("fs").exists;
+var existsSync                = require("fs").existsSync;
+var unlink                    = require("fs").unlink;
+
+var createServer              = require("http").createServer;
+var createSecureServer        = require("https").createServer;
+
+var basename                  = require("path").basename;
+var extname                   = require("path").extname;
+var join                      = require("path").join;
+var resolve                   = require("path").resolve;
+
+var parseUrl                  = require("url").parse;
+
+var inherits                  = require("util").inherits;
+var format                    = require("util").format;
+var log                       = require("util").log;
+
+var WebSocket                 = require("ws");
+var WebSocketServer           = require("ws").Server;
+
+var version                   = require("../lib/cliutil").version;
+var usage                     = require("../lib/cliutil").usage;
+var help                      = require("../lib/cliutil").help;
+var halt                      = require("../lib/cliutil").halt;
+var url                       = require("../lib/cliutil").url;
+
+var consts                    = require("../lib/consts");
+
+var JOBSTATE_NA               = consts.JOBSTATE_NA;
+var JOBSTATE_QUEUED           = consts.JOBSTATE_QUEUED;
+var JOBSTATE_INITIALIZED      = consts.JOBSTATE_INITIALIZED;
+var JOBSTATE_INSTALLING       = consts.JOBSTATE_INSTALLING;
+var JOBSTATE_SETUP            = consts.JOBSTATE_SETUP;
+var JOBSTATE_RUNNING          = consts.JOBSTATE_RUNNING;
+var JOBSTATE_STOPPING         = consts.JOBSTATE_STOPPING;
+var JOBSTATE_FINISHED         = consts.JOBSTATE_FINISHED;
+var JOBSTATE_KILLED           = consts.JOBSTATE_KILLED;
+
+var SOP_INSTALL               = consts.SOP_INSTALL;
+var COP_INSTALL               = consts.COP_INSTALL;
+var SOP_SETUP                 = consts.SOP_SETUP;
+var COP_SETUP                 = consts.COP_SETUP;
+var SOP_START                 = consts.SOP_START;
+var COP_START                 = consts.COP_START;
+var COP_RESULT                = consts.COP_RESULT;
+var SOP_ABORT                 = consts.SOP_ABORT;
+var COP_TESTERROR             = consts.COP_TESTERROR;
+var SOP_JOBSTATE              = consts.SOP_JOBSTATE;
+
+var LOG_FATAL                 = consts.LOG_FATAL;
+var LOG_WARN                  = consts.LOG_WARN;
+var LOG_INFO                  = consts.LOG_INFO;
+var LOG_VERBOSE               = consts.LOG_VERBOSE;
+var LOG_DEBUG                 = consts.LOG_DEBUG;
+
+var LOG_LEVELS                = consts.LOG_LEVELS;
+
+
+var HTTPERROR                 = function(n,m){var e=Error(m);e.code=n;throw e;};
+var CLIENTIDGEN               = (function $(){return $.c?(++$.c):($.c=1)});
+var JOBIDGEN                  = (function $(){return $.c?(++$.c):($.c=1)});
+var ROUTE                     = (function $(r,m,f){$[r+m]=[RegExp(r),m,f];});
+var MSGH                      = (function $(o,t,h,r){$[o]={t:t,h:h,r:r};});
+var FILELOCK                  = (function $(k){$[k]?delete $[k]:$[k]=1;});
+var LOGHANDLER                = (function $(l,h){h.l=l;});
+
+
+
+var MANANGER_INTERVAL         = 5000;
+var MANANGER_ERRORINTERVAL    = 1000;
+
+var SERVER_ERRORINTERVAL      = 1000;
+
+var DASHBOARD_BASE            = resolve(__dirname, "../lib/dashboard");
+
+var CONTENT_TYPES             = { ".html"       : "text/html",
+                                  ".js"         : "application/javascript",
+                                  ".css"        : "text/css"
+                                };
+
+var DEFAULT_OPTIONS           = { "host"        : null,
+                                  "token"       : null,
+                                  "port"        : 8080,
+                                  "maxjobs"     : 5,
+                                  "loglevel"    : consts.DEFAULT_LOGLEVEL,
+                                  "cachepath"   : resolve("cache"),
+                                  "secure"      : false,
+                                  "key"         : "",
+                                  "cert"        : "",
+                                  "lifetime"    : 1440
+                                };
+
+
+var options                   = Object.create(DEFAULT_OPTIONS);
+var serverDomain              = null;
+var managerDomain             = null;
+
+
+MSGH(COP_INSTALL,               Job,        "handleInstall",   "slave");
+MSGH(COP_SETUP,                 Job,        "handleSetup",     "slave");
+MSGH(COP_RESULT,                Job,        "handleResult",    "slave");
+MSGH(COP_TESTERROR,             Job,        "handleTestError", "slave");
+
+
+ROUTE("/info/$",                "GET",      infoHandler);
+ROUTE("/tests/$",               "POST",     installTestHandler);
+ROUTE("/tests/$",               "GET",      listTestsHandler);
+ROUTE("/tests/(.*)/$",          "DELETE",   uninstallTestHandler);
+ROUTE("/tests/(.*)/$",          "GET",      listTestsHandler);
+ROUTE("/jobs/(.*)/$",           "POST",     runTestHandler);
+ROUTE("/jobs/$",                "GET",      listJobsHandler);
+ROUTE("/jobs/(.*)$",            "GET",      getReportHandler);
+ROUTE("/jobs/(.*)/$",           "DELETE",   abortJobHandler);
+ROUTE("/clients/$",             "GET",      listClientsHandler);
+ROUTE("/clients/(slaves)/$",    "GET",      listClientsHandler);
+ROUTE("/$",                     "GET",      staticHandler);
+ROUTE("/(favicon.ico)$",        "GET",      staticHandler);
+ROUTE("/static/(.*)$",          "GET",      staticHandler);
+
+
+LOGHANDLER(LOG_FATAL,           logServerError);
+LOGHANDLER(LOG_FATAL,           logJobManagerError);
+LOGHANDLER(LOG_INFO,            logServerListen);
+LOGHANDLER(LOG_VERBOSE,         logClientConnect);
+LOGHANDLER(LOG_VERBOSE,         logClientDisconnect);
+LOGHANDLER(LOG_VERBOSE,         logClientReject);
+LOGHANDLER(LOG_VERBOSE,         logJobStateChange);
+LOGHANDLER(LOG_VERBOSE,         logJobInitError);
+LOGHANDLER(LOG_DEBUG,           logDebugInfo);
+LOGHANDLER(LOG_DEBUG,           logRequestError);
+LOGHANDLER(LOG_DEBUG,           logUnhandledMessage);
+LOGHANDLER(LOG_DEBUG,           logRequest);
+
+
+function main () {
+  var args = process.argv.slice(2);
+  var arg;
+
+  while ((arg = args.shift())) {
+    switch (arg) {
+
+      case "-v":
+      case "--version":
+      return version();
+
+      case "--usage":
+      return usage("<host>");
+
+      case "--help":
+      return help();
+
+      case "-p":
+      case "--port":
+      options.port = parseInt(args.shift());
+      break;
+
+      case "--host":
+      options.host = args.shift();
+      break;
+
+      case "--token":
+      options.token = args.shift();
+      break;
+
+      case "--cachepath":
+      options.cachepath = resolve(args.shift());
+      break;
+
+      case "--loglevel":
+      options.loglevel = LOG_LEVELS.indexOf(args.shift());
+      break;
+
+      case "--maxjobs":
+      options.maxjobs = parseInt(args.shift());
+      break;
+
+      case "--secure":
+      options.secure = true;
+      break;
+
+      case "--key":
+      options.key = resolve(args.shift());
+      break;
+
+      case "--cert":
+      options.cert = resolve(args.shift());
+      break;
+
+      case "--joblifetime":
+      options.lifetime = parseInt(args.shift());
+      break;
+
+      default:
+      return halt("bad argument - " + arg);
+    }
+  }
+
+  if (options.secure && existsSync(options.key) == false) {
+    halt("specified key does not exists");
+  }
+
+  if (options.secure && existsSync(options.cert) == false) {
+    halt("specified cert does not exists");
+  }
+
+  if (isNaN(options.loglevel) ||
+      options.loglevel < 0 ||
+      options.loglevel > 5) {
+    halt("invalid log level");
+  }
+
+  if (isNaN(options.lifetime) || options.lifetime < 0) {
+    halt("invalid joblifetime");
+  }
+
+  if (existsSync(options.cachepath) == false ||
+      statSync(options.cachepath).isDirectory() == false) {
+    halt("option cache-path must be a directory");
+  }
+
+  if (isNaN(options.maxjobs) || options.maxjobs < 0) {
+    halt("max-jobs must be a positive number");
+  }
+
+  notif(logDebugInfo);
+
+  runServer();
+  runJobManager();
+}
+
+
+function notif (handler, a, b, c) {
+  if (handler.l < options.loglevel + 1) {
+    handler.call(this, a, b, c);
+  }
+}
+
+
+function runServer () {
+  var http;
+  var ws;
+
+  if (serverDomain) {
+    serverDomain.dispose();
+  }
+
+  serverDomain = createDomain();
+
+  serverDomain.on("error", function (err) {
+
+    this.members.forEach(function (member) {
+      if ("close" in member == false) return;
+      try { member.close(); } catch (err) {};
+    });
+
+    notif(logServerError, err, SERVER_ERRORINTERVAL);
+
+    setTimeout(runServer, SERVER_ERRORINTERVAL);
+  });
+
+  if (options.secure) {
+    http = createSecureServer({
+      key: readFileSync(options.key),
+      cert: readFileSync(options.cert)
+    });
+  } else {
+    http = createServer();
+  }
+  http.on("request", onrequest);
+
+  ws = new WebSocketServer({ server: http });
+  ws.on("connection", onclientconnect);
+
+  serverDomain.add(http);
+  serverDomain.add(ws);
+
+  http.listen(options.port, options.host);
+
+  http.on("error", function (err) {
+    console.log(err.message);
+  });
+
+  http.on("listening", function () {
+    notif(logServerListen, options.port, options.host);
+  });
+}
+
+
+function runJobManager () {
+  var interval;
+
+  if (managerDomain) {
+    managerDomain.dispose();
+  }
+
+  managerDomain = createDomain();
+
+  managerDomain.on("error", function (err) {
+    notif(logJobManagerError, err, MANANGER_ERRORINTERVAL);
+    setTimeout(runJobManager, MANANGER_ERRORINTERVAL);
+  });
+
+  function loop () {
+    var now = Date.now();
+    var jobsToDestroy = [];
+
+    Job.all.forEach(function (job) {
+      switch (job.state) {
+
+        case JOBSTATE_QUEUED:
+        job.init();
+        break;
+
+        case JOBSTATE_INITIALIZED:
+        job.install();
+        break;
+
+        case JOBSTATE_FINISHED:
+        if (now >= job.finishtime + (options.lifetime * 60 * 1000)) {
+          jobsToDestroy.push(job);
+        }
+        break;
+      }
+    });
+
+    jobsToDestroy.forEach(function (job) {
+      if (job.domain) {
+        job.domain.dispose()
+      } else {
+        job.destroy();
+      }
+    });
+  }
+
+  managerDomain.add(setInterval(loop, MANANGER_INTERVAL));
+}
+
+
+function onrequest (req, res) {
+  var reqd;
+  var url;
+  var cmd;
+  var m;
+
+  url = parseUrl(req.url, true);
+
+  notif(logRequest, req.method, url);
+
+  reqd = createDomain();
+  
+  reqd.add(req);
+  reqd.add(res);
+
+  reqd.on("error", function (err) {
+    notif(logRequestError, err, url);
+    try {
+      if (err.name == "AssertionError") {
+        res.writeHead(400);
+      } else {
+        res.writeHead(err.code || 500);
+      }
+      res.end(err.message || "Unknown error");
+      res.on("close", function() {
+        reqd.dispose();
+      });
+    } catch (er) {
+      console.error("Error sending 500", err, req.url);
+      reqd.dispose();
+    }
+  });
+
+  reqd.run(function () {
+    var keys = Object.keys(ROUTE);
+    var route;
+    var expr;
+    var method;
+    var badmethod;
+    var auth;
+
+    for (var i = 0, l = keys.length; i < l; i++) {
+      route = ROUTE[keys[i]];
+      if ((expr = route[0].exec(url.pathname))) {
+        method = route[1];
+        cmd = route[2];
+
+        if (method !== req.method) {
+          badmethod = true;
+          continue;
+        }
+
+        if (options.token) {
+          auth = "Basic " + Buffer(":" + options.token).toString("base64");
+          if (options.token !== url.query.token &&
+              req.headers.authorization !== auth) {
+            res.setHeader("WWW-Authenticate", "Basic realm=\"stage\"");
+            res.writeHead(401, "Not Authorized");
+            res.end();
+            return;
+          }
+        }
+
+        return cmd(req, res, expr, url);
+      }
+    }
+
+    if (badmethod) {
+      HTTPERROR(405, "method not allowed");
+    } else {
+      HTTPERROR(404, "not found");
+    }
+  });
+}
+
+
+function onclientconnect (sock) {
+  var domain;
+
+  domain = createDomain();
+  domain.add(sock);
+
+  domain.on("error", onclientdomainerror);
+
+  sock.on("close", onclientclose);
+  sock.destroy = sockDestroyImpl;
+
+  domain.run(function () {
+    var req;
+    var url;
+
+    req = sock.upgradeReq;
+
+    url = parseUrl(req.url, true);
+
+    if (options.token) {
+      equal(options.token, url.query.token, "bad handshake token");
+    }
+
+    equal(/slave/.test(url.query.role), true, "Invalid role for connection");
+
+    sock.on("message", onclientmessage);
+    sock._validMasterClient = true;
+
+    sock.instance = new TestClient(sock, url.query);
+    domain.add(sock.instance);
+
+    notif(logClientConnect, sock.instance);
+  });
+}
+
+
+function onclientdomainerror (err) {
+  console.error(err.stack);
+  this.members.forEach(function (member) {
+    member.domainError = err;
+  });
+  this.dispose();
+}
+
+
+function onclientclose (sock) {
+  var idx;
+  var err;
+  var reason;
+
+  sock = this instanceof WebSocket ? this : sock;
+
+  err = sock.domainError || Error("Closed by remote part");
+
+  if (sock.instance) {
+    notif(logClientDisconnect, sock.instance, err.message);
+    sock.instance.destroy(err);
+    sock.instance = null;
+  }
+
+  if (sock.readyState == WebSocket.OPEN) {
+    sock.close(1002, err.message);
+  }
+}
+
+
+function onclientmessage (msg) {
+  var handlers;
+  var handler;
+  var instance;
+  var target;
+  var handled;
+  var idx;
+  var op;
+  var fn;
+
+  if (!(op = msg[0]) || !(handler = MSGH[op])) {
+    throw new Error("Bad command 0x" + op.toString(16));
+  }
+
+  if (!(instance = this.instance)) {
+    throw new Error("Invalid connection");
+  }
+
+  idx = (handlers = instance.handlers) && handlers.length || 0;
+
+  while (idx--) {
+    if ((target = handlers[idx]) instanceof handler.t &&
+        (typeof (fn = target[handler.h])) == "function" &&
+        (this.instance.role) == handler.r &&
+        (fn.call(target, instance, msg))) {
+      return;
+    }
+  }
+
+  notif(logUnhandledMessage, this.instance, msg);
+}
+
+
+function sockDestroyImpl () {
+  var err = this.domainError;
+  var reason = err ? err.message : "";
+
+  if (this.readyState == WebSocket.OPEN) {
+    try {
+      this.close(1002, reason);
+    } catch (err) {
+    }
+  }
+
+  if (this.instance) {
+    this.instance.destroy(err);
+    this.instance = null;
+  }
+
+  if ("_validMasterClient" in this == false) {
+    notif(logClientReject, this, reason);
+  }
+}
+
+
+function infoHandler (req, res) {
+  var context;
+
+  context = {
+    version   : require("../package").version
+  };
+
+  writeJsonResponse(res, context);
+}
+
+
+function listTestsHandler (req, res, expr) {
+  var root = options.cachepath;
+  var result = [];
+  var regex;
+
+  regex = getPackageMatchRegExp(expr[1]);
+
+  readdir(root, function (err, files) {
+    if (err) throw err;
+
+    (function next () {
+      var current;
+
+      if (!(current = files.pop())) {
+        return writeJsonResponse(res, result);
+      }
+
+      current = join(root, current);
+
+      if (regex.test(current) == false) {
+        return next();
+      }
+
+      readPackageInfo(current, function (err, info) {
+        if (err) throw err;
+        result.push(info);
+        next();
+      });
+    })();
+
+  });
+}
+
+
+function installTestHandler (req, res, expr, url) {
+  var buffers = [];
+
+  equal(req.headers["content-type"], "application/octet-stream");
+
+  req.on("data", function (chunk) {
+    buffers.push(chunk);
+  });
+
+  req.on("end", function () {
+    var data = Buffer.concat(buffers);
+
+    if (data.length == 0) {
+      HTTPERROR(400, "expected data");
+    }
+
+    readPackageInfo(data, function (err, pkg) {
+      var filename;
+      var pkgname;
+
+      if (err) {
+        throw err;
+      }
+
+      pkgname = pkg.name + "@" + pkg.version;
+      filename = resolve(options.cachepath, pkgname + ".tar");
+
+      equal(filename in FILELOCK, false, "package is about to install");
+
+      FILELOCK(filename);
+
+      exists(filename, function (doexists) {
+        FILELOCK(filename);
+        if (url.query.force != "1") {
+          equal(doexists, false, "package already exists");
+        }
+        FILELOCK(filename);
+
+        writeFile(filename, data, function (err) {
+          FILELOCK(filename);
+
+          if (err) {
+            throw err;
+          }
+
+          writeJsonResponse(res, { id: pkgname });
+        });
+      });
+    });
+  });
+}
+
+
+function uninstallTestHandler (req, res, expr) {
+  var root = options.cachepath;
+  var regex;
+  var count = 0;
+
+  regex = getPackageMatchRegExp(expr[1]);
+
+  readdir(root, function (err, files) {
+    if (err) throw err;
+
+    (function next () {
+      var current;
+
+      if (!(current = files.pop())) {
+        notEqual(count, 0, "no such test(s)");
+        res.writeHead(200);
+        return res.end();
+      }
+
+      current = join(root, current);
+
+      if (regex.test(current) == false) {
+        return next();
+      }
+
+      // Ignore package if locked
+      if (current in FILELOCK) {
+        return next();
+      }
+
+      // TODO: Check that test is not currently running?
+
+      unlink(current, function (err) {
+        if (err) throw err;
+        count++;
+        next();
+      });
+    })();
+
+  });  
+}
+
+
+function runTestHandler (req, res, expr, url) {
+  var root = options.cachepath;
+  var filename;
+  var data = "";
+
+  filename = resolve(root, expr[1] + ".tar");
+
+  req.setEncoding("utf8");
+
+  req.on("data", function (chunk) {
+    data += chunk;
+  });
+
+  req.on("end", function () {
+    exists(filename, function (doexists) {
+      var job;
+      var config;
+
+      equal(doexists, true, "package was not found: " + expr[1]);
+      equal(filename in FILELOCK, false, "package is about to install");
+
+      if (data.length) {
+        equal(req.headers["content-type"], "application/json", "expected json");
+        config = JSON.parse(data);
+      }
+
+      job = createJob(filename);
+
+      job.setConfig(config || {});
+
+      for (var k in url.query) {
+        switch (k) {
+          case "clients":
+          job.setRequestedCandidates(parseInt(url.query.clients));
+          break;
+        }
+      } 
+
+      writeJsonResponse(res, job);
+    });  
+  });
+}
+
+
+function listJobsHandler (req, res) {
+  writeJsonResponse(res, Job.all);
+}
+
+
+function abortJobHandler (req, res, expr) {
+  var data;
+  var job;
+
+  job = Job.byId(parseInt(expr[1], 10));
+
+  if (!job) {
+    HTTPERROR(404, "No such job");
+  }
+
+  if (job.isRunning() == false) {
+    HTTPERROR(400, "Job #" + job.id + "is not running");
+  }
+
+  job.abort();
+
+  writeJsonResponse(res, job);
+}
+
+
+function listClientsHandler (req, res, expr) {
+  var result;
+
+  switch (expr && expr[1]) {
+
+    case "slaves":
+    result = TestClient.slaves;
+    break;
+
+    default:
+    result = TestClient.all;
+    break;
+  }
+
+  writeJsonResponse(res, result);
+}
+
+
+function getReportHandler (req, res, expr) {
+  var data;
+  var job;
+  var report;
+
+  job = Job.byId(parseInt(expr[1], 10));
+
+  if (!job) {
+    HTTPERROR(404, "No such job");
+  }
+
+  report = job.getReport();
+
+  writeJsonResponse(res, report);
+}
+
+
+function staticHandler (req, res, expr) {
+  var path;
+
+  path = join(DASHBOARD_BASE, expr[1] ? expr[1] : "index.html");
+
+  exists(path, function (doexists) {
+
+    if (doexists == false) {
+      HTTPERROR(404, "not found");
+    }
+
+    readFile(path, function (err, data) {
+
+      if (err) {
+        HTTPERROR(500, err.message);
+      }
+
+      res.setHeader("Content-Type", CONTENT_TYPES[extname(path)]);
+      res.setHeader("Content-Length", data.length);
+      res.writeHead(200);
+      res.end(data);
+
+    });
+  });
+}
+
+
+function writeJsonResponse (res, obj) {
+  var data = JSON.stringify(obj);
+  res.setHeader("Content-Type", "application/json");
+  res.setHeader("Content-Length", data.length);
+  res.writeHead(200);
+  res.end(data);
+}
+
+
+function getPackageMatchRegExp (q) {
+  var regexp;
+  q = q && q.length ? q : "*";
+  regexp = new RegExp(q.replace(/\*/, "(.*)") + "(.*).tar");
+  return regexp;
+}
+
+
+function readPackageInfo (bufferOrPath, C) {
+
+  function onexit (err, stdout, stderr) {
+    if (err) return C(new Error(stderr));
+    return C(null, JSON.parse(stdout));
+  }
+
+  if (Buffer.isBuffer(bufferOrPath)) {
+    exec("tar -xO ./package.json", onexit).stdin.end(bufferOrPath);
+  } else {
+    exec("tar -xOf " + bufferOrPath + " ./package.json", onexit);
+  }
+}
+
+
+function createJob (path) {
+  var domain;
+  var job;
+
+  job = new Job(path);
+
+  domain = createDomain();
+  domain.add(job);
+
+  domain.on("error", function (err) {
+    job.finish(err);
+  });
+
+  return job;
+}
+
+
+function Job (path) {
+  EventEmitter.call(this);
+
+  this.id = JOBIDGEN();
+  this.name = basename(path, ".tar");
+  this.testpath = path;
+  this.createtime = Date.now();
+  this.starttime = null;
+  this.finishtime = null;
+  this.state = JOBSTATE_QUEUED;
+  this.lastError = null;
+
+  this.config = {};
+
+  this.report = { state: "initializing" };
+  
+  this.requestedCandidates = 0;
+
+  this.installCount = 0;
+  this.setupCount = 0;
+  this.finishCount = 0;
+  this.candidateCount = 0;
+
+  this.candidates = null;
+  this.subscribers = [];
+
+  this.constructor.all.push(this);
+}
+
+inherits(Job, EventEmitter);
+
+Job.all                 = [];
+
+
+Object.defineProperty(Job, "runningJobs", {
+  get: function () {
+    Job.all.reduce(function (prev, curr) {
+      prev = typeof prev == "number" ? prev : 0;
+      return curr.isRunning() ? prev + 1 : prev;
+    });
+  }
+});
+
+
+Job.byId = function (id) {
+  var job;
+  for (var i = 0, l = Job.all.length; i < l; i++) {
+    job = Job.all[i];
+    if (job.id == id) {
+      return job;
+    }
+  }
+  return null;
+};
+
+
+Job.prototype.setRequestedCandidates = function (val) {
+  if (isNaN(val) || val < 0) {
+    throw new Error("Bad value for requestedCandidates");
+  }
+  this.requestedCandidates = val;
+};
+
+
+Job.prototype.isRunning = function () {
+  return this.state !== JOBSTATE_QUEUED &&
+         this.state !== JOBSTATE_FINISHED;
+};
+
+
+Job.prototype.setState = function (newstate) {
+  this.state = newstate;
+  this.broadcastState();
+  notif(logJobStateChange, this);
+};
+
+
+Job.prototype.setConfig = function (config) {
+  for (var k in config) {
+    this.config[k] = config[k];
+  }
+};
+
+
+Job.prototype.init = function () {
+  var self = this;
+  var candidates;
+
+  if (options.maxjobs && Job.runningJobs + 1 > options.maxjobs) {
+    notif(logJobInitError, this, "Too many running jobs");
+    return;
+  }
+
+  candidates = [];
+
+  TestClient.slaves.forEach(function (c) {
+    // TODO: More filters when choosing candidates
+    if (candidates.length < self.requestedCandidates ||
+        self.requestedCandidates === 0) {
+      candidates.push(c);
+    }
+  });
+
+  if (candidates.length < 1 || 
+    (self.requestedCandidates !== 0 &&
+     candidates.length != self.requestedCandidates)) {
+    notif(logJobInitError, this, "Not enough candidates");
+    return;
+  }
+
+  candidates.forEach(function (candidate) {
+    candidate.addHandler(self);
+  });
+
+  this.candidates = candidates;
+  this.candidateCount = candidates.length;
+
+  this.report = { state: "running" };
+  this.setState(JOBSTATE_INITIALIZED);
+};
+
+
+Job.prototype.install = function () {
+  var id = this.id;
+  var candidates = this.candidates;
+
+  // Check if we need to wait until the test is
+  // installed on local
+  if (this.testPath in FILELOCK) {
+    return;
+  }
+
+  this.setState(JOBSTATE_INSTALLING);
+
+  readFile(this.testpath, function (err, data) {
+    var msg;
+
+    if (err) throw err;
+
+    msg = new Buffer(data.length + 5);
+    msg.writeUInt8(SOP_INSTALL, 0);
+    msg.writeUInt32BE(id, 1);
+    data.copy(msg, 5);
+
+    candidates.forEach(function (candidate) {
+      candidate.send(msg);
+    });
+  });
+
+};
+
+
+Job.prototype.setup = function () {
+  var candidates = this.candidates;
+  var id = this.id;
+  var name = this.name;
+  var config = this.config;
+
+  this.setState(JOBSTATE_SETUP);
+  
+  candidates.forEach(function (candidate) {
+    var cfg;
+    var ctx;
+    var msg;
+
+    cfg = {};
+
+    for (var k in config) {
+      cfg[k] = config[k];
+    }
+
+    config["name"] = name;
+    config["clientid"] = candidates.indexOf(candidate) + 1;
+
+    ctx = JSON.stringify(config);
+
+    msg = new Buffer(ctx.length + 5);
+    msg.writeUInt8(SOP_SETUP, 0);
+    msg.writeUInt32BE(id, 1);
+    msg.write(ctx, 5);
+
+    candidate.send(msg);
+  });
+};
+
+
+Job.prototype.start = function () {
+  var candidates = this.candidates;
+  var msg;
+
+  this.starttime = Date.now();
+  this.setState(JOBSTATE_RUNNING);
+
+  msg = new Buffer(5);
+  msg.writeUInt8(SOP_START, 0);
+  msg.writeUInt32BE(this.id, 1);
+
+  candidates.forEach(function (candidate) {
+    candidate.send(msg);
+  });
+};
+
+
+Job.prototype.handleTestError = function (candidate, msg) {
+  var reason;
+  var idx;
+
+  if (msg.readUInt32BE(1) !== this.id) {
+    return false;
+  }
+
+  candidate.removeHandler(this);
+  idx = this.candidates.indexOf(candidate);
+  this.candidates.splice(idx, 1);
+
+  reason = msg.toString("utf8", 5);
+
+  this.abort(Error("Slave #" +
+                  candidate.id +
+                  " had a critical error: " +
+                  reason));
+
+  return true;
+};
+
+
+Job.prototype.handleInstall = function (client, msg) {
+
+  if (msg.readUInt32BE(1) !== this.id) {
+    return false;
+  }
+
+  if (this.state !== JOBSTATE_INSTALLING) {
+    return true;
+  }
+
+  if (++this.installCount == this.candidateCount) {
+    this.setup();
+  }
+
+  return true;
+};
+
+
+Job.prototype.handleSetup = function (client, msg) {
+
+  if (msg.readUInt32BE(1) !== this.id) {
+    return false;
+  }
+
+  if (this.state !== JOBSTATE_SETUP) {
+    return true;
+  }
+
+  if (++this.setupCount == this.candidateCount) {
+    this.start();
+  }
+
+  return true;
+};
+
+
+Job.prototype.handleResult = function (client, msg) {
+
+  if (msg.readUInt32BE(1) !== this.id) {
+    return false;
+  }
+
+  if (this.state !== JOBSTATE_RUNNING) {
+    return true;
+  }
+
+  this.report.state = "collecting";
+  this.report.collection = this.report.collection || [];
+  this.report.collection.push(msg.toString("utf8", 5));
+
+  console.log("----- Test result ----");
+  console.log(msg.toString("utf8", 5));
+
+  if (++this.finishCount == this.candidateCount) {
+    this.report.state = "ok";
+    this.finish();
+  }
+
+  return true;
+};
+
+
+Job.prototype.handleDisconnect = function (candidate, reason) {
+  var idx;
+  
+  idx = this.candidates.indexOf(candidate);
+  this.candidates.splice(idx, 1);
+
+  this.abort(Error("Slave #" + candidate.id + " disconnected without reason"));
+};
+
+
+Job.prototype.abort = function (err) {
+  var id = this.id;
+  var msg;
+  var reason;
+
+  reason = (err && err.message) || "UNKNOWN_REASON";
+
+  this.report = { state: "error", reason: reason };
+
+  msg = new Buffer(Buffer.byteLength(reason) + 5);
+  msg.writeUInt8(SOP_ABORT, 0);
+  msg.writeUInt32BE(this.id, 1);
+  msg.write(reason, 5);
+
+  this.candidates.forEach(function (candidate) {
+    candidate.send(msg);
+  });
+
+  this.finish(err);
+};
+
+
+Job.prototype.finish = function (err) {
+  var self = this;
+
+  if (this.state == JOBSTATE_FINISHED) {
+    // TODO: Just ignore instead of throw
+    throw new Error("Already finished");
+  }
+
+  this.finishtime = Date.now();
+  this.lastError = err;
+  this.setState(JOBSTATE_FINISHED);
+
+  // Make sure that all candidates are removes properly
+  this.candidates = this.candidates.filter(function (candidate) {
+    candidate.removeHandler(self);
+    return false;
+  });
+  
+};
+
+
+Job.prototype.getReport = function () {
+  // TODO: Clone report before returning it
+  return this.report;
+};
+
+
+Job.prototype.addSubscriber = function (client) {
+  this.subscribers.push(client);
+};
+
+
+Job.prototype.removeSubscriber = function (client) {
+  var idx;
+  if ((idx = this.subscribers.indexOf(client)) != -1) {
+    this.subscribers.splice(idx, 1);
+  }
+};
+
+
+Job.prototype.broadcastState = function () {
+  var subscribers = this.subscribers;
+  var msg;
+  var ctx;
+
+  ctx = JSON.stringify(this);
+  msg = new Buffer(ctx.length + 1);
+  msg.writeUInt8(SOP_JOBSTATE, 0);
+  msg.write(ctx, 1);
+
+  subscribers.forEach(function (c) {
+    c.send(msg, { binary: true });
+  });
+};
+
+
+Job.prototype.destroy = function () {
+  var self = this;
+  var all = this.constructor.all;
+  var idx;
+
+  if ((idx = all.indexOf(this)) !== -1) {
+    all.splice(idx, 1);
+  }
+
+  // Make sure that all candidates are removes properly
+  this.candidates = this.candidates.filter(function (candidate) {
+    candidate.removeHandler(self);
+    return false;
+  });
+
+  // Remove all subscribers
+  this.subscribers.forEach(function (client) {
+    self.removeSubscriber(client);
+  });
+};
+
+
+Job.prototype.toJSON = function () {
+  return {
+    id              : this.id,
+    name            : this.name,
+    createtime      : this.createtime,
+    starttime       : this.starttime,
+    finishtime      : this.finishtime,
+    state           : this.state,
+    lastError       : this.lastError && this.lastError.message || null,
+    installCount    : this.installCount,
+    setupCount      : this.setupCount,
+    finishCount     : this.finishCount,
+    candidateCount  : this.candidateCount,
+    report          : this.report
+  };
+};
+
+
+function TestClient (sock, info) {
+  this.id = CLIENTIDGEN();
+  this.sock = sock;
+  this.role = info.role;
+  this.remoteAddress = sock.upgradeReq.socket.remoteAddress;
+  this.remotePort = sock.upgradeReq.socket.remotePort;
+  this.arch = info.arch || "na";
+  this.engineName = info.engineName || "na";
+  this.engineVersion = info.engineVersion || "na";
+  this.platform = info.platform || "na";
+  this.cpus = info.cpus || 0;
+  this.state = "ready";
+  this.handlers = null;
+
+  this.constructor.all.push(this);
+}
+
+
+TestClient.all = [];
+
+
+Object.defineProperty(TestClient, "slaves", {
+  get: function () {
+    return this.all.filter(function (c) { return c.role == "slave" });
+  }
+});
+
+
+TestClient.prototype.send = function (msg) {
+  this.sock.send(msg, { binary: true });
+};
+
+
+TestClient.prototype.addHandler = function (target) {
+  if (!this.handlers) {
+    this.handlers = [target];
+  } else {
+    this.handlers.push(target);
+  }
+};
+
+
+TestClient.prototype.removeHandler = function (target) {
+  var idx;
+  idx = this.handlers.indexOf(target);
+  if (idx != -1) {
+    this.handlers.splice(idx, 1);
+  }
+};
+
+
+TestClient.prototype.toJSON = function () {
+  return {
+    id            : this.id,
+    role          : this.role,
+    remoteAddress : this.remoteAddress,
+    remotePort    : this.remotePort,
+    arch          : this.arch,
+    engineName    : this.engineName,
+    engineVersion : this.engineVersion,
+    platform      : this.platform,
+    cpus          : this.cpus,
+    state         : this.state
+  };
+};
+
+
+TestClient.prototype.destroy = function (err) {
+  var all = this.constructor.all;
+  var idx = (this.handlers && this.handlers.length) || 0;
+  var handler;
+
+  while (idx--) {
+    if ((handler = this.handlers[idx])) {
+      this.removeHandler(handler);
+      if ("handleDisconnect" in handler) {
+        try {
+          handler.handleDisconnect(this, err);
+        } catch (er) {
+        }
+      }
+    }
+  }
+
+  if ((idx = all.indexOf(this)) !== -1) {
+    all.splice(idx, 1);
+  }
+};
+
+
+function logServerListen (port, host) {
+  log("Server is listening to " + (host || "*") + ":" + port);
+}
+
+
+function logServerError (err, time) {
+  console.error("----------------- SERVER ERROR ------------------");
+  console.error(err && err.stack);
+  console.error("-------------------------------------------------");
+  log("Restarting server in %s sec...", (time / 1000));
+}
+
+
+function logJobManagerError (err, time) {
+  console.error("-------------- JOB MANAGER ERROR ----------------");
+  console.error(err && err.stack);
+  console.error("-------------------------------------------------");
+  log("Restarting job manager in %s sec...", (time / 1000));
+}
+
+
+function logRequest (method, url) {
+  log("Request " + method + " " + url.pathname);
+}
+
+
+function logRequestError (err, url) {
+  log("Request Error: " + err.message + " - " + url.href);
+  console.log(err.stack);
+}
+
+
+function logClientConnect (client) {
+  var addr = client.remoteAddress + ":" + client.remotePort;
+  log("Client connected " + addr);
+}
+
+
+function logClientDisconnect (client, reason) {
+  var addr = client.remoteAddress + ":" + client.remotePort;
+  log("Client disconnected " + addr + " (reason: " + reason + ")");
+}
+
+
+function logUnhandledMessage (client, msg) {
+  var addr = client.remoteAddress + ":" + client.remotePort;
+  log("Unhandled message 0x" + msg[0].toString(16) + " by " + addr);
+}
+
+
+function logJobInitError (job, reason) {
+  log("Could not init job#" + job.id + " Reason: " + reason);
+}
+
+
+function logClientReject (client, reason) {
+  var req = client.upgradeReq || {};
+  var sock = req.socket || {};
+  var addr = (sock.remoteAddress || "na") + ":" + (sock.remotePort || "na");
+  log("Client '" + addr + "' was rejected, reason: " + reason);
+}
+
+
+function logJobStateChange (job) {
+  log((function () { switch (job.state) {
+    case JOBSTATE_QUEUED:
+    return format("TestJob#%s: now queued",
+                 job.id);
+
+    case JOBSTATE_INITIALIZED:
+    return format("TestJob#%s: now initialized with %s slave(s)",
+                  job.id,
+                  job.candidateCount);
+
+    case JOBSTATE_INSTALLING:
+    return format("TestJob#%s: Installing test package on slaves (%s of %s)",
+                  job.id,
+                  job.installCount,
+                  job.candidateCount);
+
+    case JOBSTATE_SETUP:
+    return format("TestJob#%s: Slaves are setting up (%s of %s)",
+                  job.id,
+                  job.setupCount,
+                  job.candidateCount);
+
+    case JOBSTATE_RUNNING:
+    return format("TestJob#%s: Running (%s of %s)",
+                  job.id,
+                  job.finishCount,
+                  job.candidateCount);
+
+    case JOBSTATE_FINISHED:
+    if (job.lastError) {
+      return format("TestJob#%s: Finished with error (reason: %s)",
+                    job.id,
+                    job.lastError.message || "Unknown error");
+    } else {
+      return format("TestJob#%s: Test is finished (%s ms)",
+                    job.id,
+                    job.finishtime - job.starttime);
+    }
+  }})());
+}
+
+
+function logDebugInfo () {
+  log("WARNING: Server is running in debug-mode");
+}
+
+
+if (process.argv[1] == __filename) {
+  main();
+}

@@ -1,0 +1,93 @@
+#!/usr/bin/env node
+
+"use strict";
+
+var getReport                 = require("../lib/api").getReport;
+
+var version                   = require("../lib/cliutil").version;
+var usage                     = require("../lib/cliutil").usage;
+var help                      = require("../lib/cliutil").help;
+var halt                      = require("../lib/cliutil").halt;
+var url                       = require("../lib/cliutil").url;
+var  toHttpUrl                = require("../lib/cliutil").toHttpUrl;
+
+var consts                    = require("../lib/consts");
+
+
+var DEFAULT_OPTIONS           = { "url"         : consts.DEFAULT_URL,
+                                  "json"        : false,
+                                  "jobid"       : null
+                                };
+
+
+var options                   = Object.create(DEFAULT_OPTIONS);
+
+
+function main () {
+  var args = process.argv.slice(2);
+  var arg;
+
+  while ((arg = args.shift())) {
+    switch (arg) {
+
+      case "-v":
+      case "--version":
+      return version();
+
+      case "--usage":
+      return usage("<jobid>");
+
+      case "--help":
+      return help();
+
+      case "--url":
+      case "--hostname":
+      case "--port":
+      case "--token":
+      case "--secure":
+      options.url = url(options.url, arg, args.shift());
+      break;
+
+      case "--json":
+      options.json = true;
+      break;
+
+      default:
+
+      if (arg[0] == "-") {
+        halt("unknown option " + arg);
+      }
+
+      options.jobid = parseInt(arg, 10);
+      break;
+    }
+  }
+
+  options.url = toHttpUrl(options.url);
+
+  if (!options.jobid || isNaN(options.jobid)) {
+    halt("expected <jobid>");
+  }
+
+  getReport(options.url, options.jobid, function (err, report) {
+    if (err) {
+      halt(err.message);
+    }
+
+    if (options.json) {
+      return console.log(JSON.stringify(result));
+    }
+
+    console.log(report);
+    // console.log("total %s", list.length);
+    // 
+    // list.forEach(function (job) {
+    //   console.log("#%s %s %s", job.id, job.name, job.state);
+    // });
+  });
+}
+
+
+if (process.argv[1] == __filename) {
+  main();
+}

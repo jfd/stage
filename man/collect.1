@@ -1,0 +1,108 @@
+.\" Generated with Ronnjs 0.3.8
+.\" http://github.com/kapouer/ronnjs/
+.
+.TH "STAGE\-COLLECT" "1" "January 2013" "" ""
+.
+.SH "NAME"
+\fBstage-collect\fR \-\- Collect report
+.
+.SH "SYNOPSIS"
+.
+.nf
+stage\-collect [options] <jobid>
+.
+.fi
+.
+.SH "DESCRIPTION"
+Collects a report for specifed <jobid>
+.
+.SH "OPTIONS"
+Available options for command:
+.
+.IP "\(bu" 4
+\fB\-v\fR, \fB\-\-version\fR:
+.
+.br
+Shows current version of the command, then exit
+.
+.IP "\(bu" 4
+\fB\-\-help\fR:
+.
+.br
+Shows the manual page entry for command
+.
+.IP "\(bu" 4
+\fB\-\-usage\fR:
+.
+.br
+Show command usage, then exit
+.
+.IP "\(bu" 4
+\fB\-\-url <url>\fR:
+.
+.br
+Full \fIurl\fR where to the Stage Master Server\. This can also be controlled by setting the STAGE_URL environment variable\.
+.
+.IP "\(bu" 4
+\fB\-\-host <host>\fR:
+.
+.br
+Set the \fIhost\fR of current \fIurl\fR to the Stage Master Server\.
+.
+.IP "\(bu" 4
+\fB\-\-port <port\fR:
+.
+.br
+Set the \fIport\fR of current \fIurl\fR to the Stage Master Server\.
+.
+.IP "\(bu" 4
+\fB\-\-secure\fR:
+.
+.br
+Indicates that the \fIurl\fR to the Stage Master Server is secure\. The protocol of the \fIurl\fR is changed to \fIhttps\fR
+.
+.IP "\(bu" 4
+\fB\-\-token <token>\fR:
+.
+.br
+Sends the required \fItoken\fR requested by the Stage Master Server\.
+.
+.IP "\(bu" 4
+\fB\-\-json\fR:
+.
+.br
+Format output as JSON instead of text
+.
+.IP "" 0
+.
+.SH "EXAMPLES"
+Collects the report from job #1:
+.
+.IP "" 4
+.
+.nf
+stage\-collect 1
+.
+.fi
+.
+.IP "" 0
+.
+.SH "ENVIRONMENT VARIABLES"
+The following enivornment variables are used by command:
+.
+.P
+  \fISTAGE_URL\fR
+.
+.br
+  The full URL to the Stage Master Server e\.g \fBhttp://myserver:8080/\fR\|\.
+.
+.SH "COPYRIGHT"
+Copyright (C) 2013 Johan Dahlberg \fIhttp://jfd\.github\.com\fR
+.
+.SH "SEE ALSO"
+.
+.IP "\(bu" 4
+stage\-run(1)
+.
+.IP "" 0
+

@@ -1,0 +1,531 @@
+#!/usr/bin/env node
+
+"use strict";
+
+var exec                      = require("child_process").exec;
+
+var readFile                  = require("fs").readFile;
+
+var resolve                   = require("path").resolve;
+
+var parseUrl                  = require("url").parse;
+
+var format                    = require("util").format;
+
+var Connection                = require("ssh2");
+var TempDir                   = require("temporary/lib/dir");
+
+var version                   = require("../lib/cliutil").version;
+var usage                     = require("../lib/cliutil").usage;
+var help                      = require("../lib/cliutil").help;
+var halt                      = require("../lib/cliutil").halt;
+var url                       = require("../lib/cliutil").url;
+var toHttpUrl                 = require("../lib/cliutil").toHttpUrl;
+var toWsUrl                   = require("../lib/cliutil").toWsUrl;
+
+var consts                    = require("../lib/consts");
+
+var RECONNECT_INTERVAL        = 10000;
+var MASTER_DESTDIR            = "./.stagemaster";
+var SLAVE_DESTDIR             = "./.stageslave";
+
+var DEFAULT_OPTIONS           = { "type"        : null,
+                                  "loglevel"    : 5,
+                                  "attempts"    : 50,
+                                  "rurl"        : null,
+                                  "rport"       : 8080,
+                                  "rloglevel"   : null,
+                                  "rmaxjobs"    : null,
+                                  "rtoken"      : null,
+                                  "config"      : {},
+                                  "quiet"       : false,
+                                  "debug"       : true
+                                };
+
+
+var options                   = Object.create(DEFAULT_OPTIONS);
+
+
+function main () {
+  var args = process.argv.slice(2);
+  var targets;
+  var arg;
+
+  targets = [];
+
+  while ((arg = args.shift())) {
+    switch (arg) {
+
+      case "-v":
+      case "--version":
+      return version();
+
+      case "--usage":
+      return usage("<master|slave> [<install target> ...]");
+
+      case "--help":
+      return help();
+
+      case "--silent":
+      case "--quiet":
+      options.quiet = true;
+      break;
+
+      case "--debug":
+      options.debug = true;
+      break;
+
+      case "--reconnect-attempts":
+      options.attempts = parseInt(args.shift());
+      break;
+
+      case "--remote-url":
+      options.rurl = args.shift();
+      break;
+
+      case "--remote-port":
+      options.rport = parseInt(args.shift());
+      break;
+
+      case "--remote-loglevel":
+      options.rloglevel = parseInt(args.shift());
+      break;
+
+      case "--remote-maxjobs":
+      options.rmaxjobs = parseInt(args.shift());
+      break;
+
+      case "--remote-token":
+      options.rtoken = args.shift();
+      break;
+
+      default:
+
+      if (arg[0] == "-") {
+        halt("unknown option " + arg);
+      }
+
+      if (options.type === null) {
+        options.type = arg;
+      } else {
+        targets.push(getHostDetails(arg));
+      }
+      break;
+    }
+  }
+
+  if (options.type === null || /^slave|^master/.test(options.type) == false) {
+    halt("expected <type> of machine. Valid types are 'master' or 'slave'");
+  }
+
+  if (targets.length == 0) {
+    halt("Expected at least one install target");
+  }
+
+  if (options.type == "slave") {
+    options.rurl = toWsUrl(options.rurl);
+  }
+
+  if (options.rport !== null && isNaN(options.rport) || options.rport < 0) {
+    halt("--remote-port must be a positive number");
+  }
+
+  if (options.type == "slave" && options.rurl === null) {
+    halt("--remote-url must be set for slaves");
+  }
+
+  if (options.type == "slave" && /^ws/.test(options.rurl) == false) {
+    halt("Protocol for --remote-url must be either ws: or wss:");
+  }
+
+  if (options.rmaxjobs !== null &&
+      isNaN(options.rmaxjobs) ||
+      options.rmaxjobs < 0) {
+    halt("--remote-port must be a positive number");
+  }
+
+  if (isNaN(options.attempts) || options.attempts < 0) {
+    halt("--reconnect-attempts must be a positive number");
+  }
+
+  function onpackage (err, pkg) {
+    if (err) halt(err.message);
+    installAll(targets, pkg, oninstalldone);
+  }
+
+  function oninstalldone (err) {
+    var targeturl;
+    if (err) halt(err.message);
+
+    if (targets.length == 1) {
+      if (options.type == "master") {
+        targeturl = "http://" + targets[0].host + ":" + options.rport + "/";
+        if (options.rtoken) {
+          targeturl += "?token=" + encodeURIComponent(options.rtoken);
+        }
+        log("Successfully installed MASTER on specified target");
+        log("");
+        log("Validate the installation by browsing to:");
+        log("  %s", targeturl);
+        log("");
+        log("");
+        log("To make things easier, set the environmental variable:");
+        log("  export STAGE_URL=%s", targeturl);
+        log("");
+      } else {
+        targeturl = toHttpUrl(options.rurl);
+        log("Successfully installed SLAVE on specified target");
+        log("");
+        log("Validate the installation by issue the 'stage clients' command:");
+        log("  stage clients --url %s", targeturl);
+        log("");
+      }
+    } else {
+      if (options.type == "master") {
+        log("Successfully installed MASTER on specified targets");
+      } else {
+        log("Successfully installed SLAVE on specified targets");
+      }
+    }
+  }
+
+  log("Compressing Stage (via npm)...");
+
+  getNdtPackage(onpackage);
+}
+
+
+function log () {
+  if (options.quiet == false) {
+    process.stdout.write(format.apply(null, arguments) + "\n");
+  }
+}
+
+
+function debug () {
+  if (options.quiet == false && options.debug) {
+    process.stdout.write(format.apply(null, arguments) + "\n");
+  }
+}
+
+
+function getHostDetails (expr) {
+  var url;
+  var details;
+  var auth;
+  var idx;
+
+  if ((idx = expr.indexOf("@")) == -1) {
+    halt("expected username in target address");
+  }
+
+  details = {};
+
+  auth = expr.substr(0, idx);
+  expr = expr.substr(idx + 1);
+
+  if ((idx =auth.indexOf(":")) !== -1) {
+    details.username = auth.substr(0, idx);
+    details.password = auth.substr(idx + 1);
+  } else {
+    details.username = auth;
+  }
+
+  if (/.+\:\/\//.test(expr) == false) {
+    expr = "ssh://" + expr;
+  }
+
+  url = parseUrl(expr);
+
+  details.host = url.hostname;
+  details.port = url.port || 22;
+
+  return details;
+}
+
+
+function remoteExec(conn, cmd, C) {
+
+  function onexec (err, stream) {
+    if (err) return C(err, "", "");
+    waitForRemoteExit(stream, C);
+  }
+
+  conn.exec(cmd, onexec);
+}
+
+
+function waitForRemoteExit (stream, C) {
+  var exited = false;
+  var stdout = "";
+  var stderr = "";
+
+  function ondata (chunk, extended) {
+    if (extended == "stderr") {
+      stderr += chunk.toString();
+    } else {
+      stdout += chunk.toString();
+    }
+  }
+
+  function onexit (code, signal) {
+    if (exited) return;
+    exited = true;
+    if (code === 0 && !signal) {
+      C(null, stdout, stderr);
+    } else {
+      var e = new Error('Command failed: ' + stderr);
+      e.code = code;
+      e.signal = signal;
+      C(e, stdout, stderr);
+    }
+  }
+
+  stream.on("data", ondata);
+  stream.on("exit", onexit);
+}
+
+
+function installAll (targets, pkg, C) {
+  
+  targets = targets.slice(0);
+
+  (function next (err) {
+    var target;
+    if (err) return C(err);
+    if (!(target = targets.shift())) return C();
+    log("Connecting to '%s'...", target.host);
+    install(target, pkg, next);
+  })();
+}
+
+
+function install (details, pkg, C) {
+  var remote;
+  var addr;
+  var workdir;
+  var pkgdir;
+  var cachedir;
+
+  function cleanup (err) {
+    if (remote) {
+      remote.end();
+      remote = null;
+    }
+    return C(err);
+  }
+
+  addr = details.host + ":" + (details.port || 22);
+
+  function onconnection (err, conn) {
+    if (err) cleanup(err);
+    remote = conn;
+    remoteExec(remote, "which node", onnodecheck);
+  }
+
+  function onnodecheck (err, stdout) {
+    if (err || stdout.length == 0) {
+      cleanup(new Error("dep 'node' is not available"));
+    } 
+    remoteExec(remote, "which npm ", onnpmcheck);
+  }
+
+  function onnpmcheck (err, stdout) {
+    if (err || stdout.length == 0) {
+      cleanup(new Error("dep 'npm' is not available"));
+    }
+    remoteExec(remote, "pwd ", onworkdir);
+  }
+
+  function onworkdir (err, stdout) {
+    var dirs;
+    var dest;
+    if (err) cleanup(err);
+    dest = options.type == "master" ? MASTER_DESTDIR : SLAVE_DESTDIR;
+    workdir = resolve(stdout.split("\n")[0], dest);
+    pkgdir = resolve(workdir, "package");
+    cachedir = resolve(workdir, "cache");
+    log("Current work directory for '%s' is now '%s'...", addr, workdir);
+    log("Creating directory structure on '%s'...", addr);
+    dirs = [workdir, pkgdir, cachedir].join(" ");
+    remoteExec(remote, "mkdir -p " + dirs, ondircreated);
+  }
+
+  function ondircreated (err) {
+    if (err) cleanup(err);
+    log("Unpacking application package on '%s'...", addr);
+    remote.exec("tar xz -C " + workdir, function (err, stream) {
+      if (err) cleanup(err);
+      waitForRemoteExit(stream, onunpack);
+      stream.write(pkg);
+      stream.end();
+    });
+  }
+
+  function onunpack (err) {
+    if (err) cleanup(err);
+    log("Installing application package on '%s'...", addr);
+    remoteExec(remote, "cd " + pkgdir  + " && npm install", onnpm);
+  }
+
+  function onnpm (err) {
+    var script;
+    var forever;
+    var target;
+    var args;
+
+    if (err) cleanup(err);
+
+    log("Starting process using 'forever' on '%s'...", addr);
+
+    args = ["--cachepath", cachedir];
+
+    if (options.rloglevel !== null) {
+      args.push("--loglevel", options.rloglevel);
+    }
+
+    if (options.type == "master" && options.rmaxjobs !== null) {
+      args.push("--maxjobs", options.rmaxjobs);
+    }
+
+    if (options.type == "master" && options.rport !== null) {
+      args.push("--port", options.rport);
+    }
+
+    if (options.type == "master" && options.rtoken !== null) {
+      args.push("--token", options.rtoken);
+    }
+
+    if (options.type == "slave") {
+      args.push("--url", options.rurl);
+    }
+
+    forever = resolve(pkgdir, "node_modules", "forever", "bin", "forever");
+    target = resolve(pkgdir, "bin", "stage") + "-" + options.type;
+    script = target + " " + args.join(" ");
+
+    remoteExec(remote, forever + " start " + script, onstarted);
+  }
+
+  function onstarted (err) {
+    if (err) cleanup(err);
+    cleanup();
+  }
+
+  details.tryKeyboard = true;
+
+  setupConnection(details, options.attempts, onconnection);
+}
+
+
+function getNdtPackage (C) {
+  var root = resolve(__dirname, "../");
+  var tempdir;
+  var opts;
+
+  function onexit (err, stdout, stderr) {
+    var filename;
+    var path;
+    var data;
+
+    if (err) {
+      tempdir.rmdir();
+      return C(new Error(stderr));
+    }
+
+    filename = stdout.split("\n")[0];
+    path = resolve(tempdir.path, filename);
+
+    readFile(path, function (err, data) {
+      tempdir.rmdir();
+      return C(err, data);
+    });
+  } 
+
+  tempdir = new TempDir;
+
+  opts = {
+    cwd: tempdir.path
+  };
+
+  // Creates a package of application. Unfortantly, we need to
+  // temporary store the package in a temp-dir, because 'npm' does
+  // not support stdout as a target...
+  exec("npm pack " + root, opts, onexit)
+}
+
+
+function setupConnection (opts, attempts, C) {
+  var conn = new Connection();
+
+
+  function doreconnect () {
+    // Always reconnect if attempts is "forever".
+    if (attempts === 0) {
+      log("Reconnecting in %s seconds...", RECONNECT_INTERVAL / 1000);
+      return setTimeout(function () {
+        setupConnection(opts, 0, C);
+      }, RECONNECT_INTERVAL);
+    }
+
+    if (attempts - 1 > 0) {
+      attempts--;
+      log("Reconnecting in %s seconds...", RECONNECT_INTERVAL / 1000);
+      return setTimeout(function () {
+        setupConnection(opts, 0, C);
+      }, RECONNECT_INTERVAL);
+    }
+
+    return C(new Error("Unable to reach host"));
+  }
+
+  function onconnect () {
+    debug("Connected to remote host...");
+  }
+
+  function onready () {
+    debug("Connection to remote is now ready...");
+    this.removeListener("close", onclose);
+    return C(null, this);
+  }
+
+  function onkeyboard (name, instr, lang, prompts, finish) {
+    finish(opts.password);
+  }
+
+  function onerror (err) {
+    this.removeListener("close", onclose);
+    switch (err.code) {
+
+      case "ECONNREFUSED":
+      case "ENETUNREACH":
+      return doreconnect();
+      default:
+      debug("error");
+      return C(err);
+    }
+  }  
+
+  function onclose (hadError) {
+    if (!hadError) {
+      this.removeListener("close", onclose);
+      log("Disconnect before ready signal, host is propbably down...");
+      doreconnect();
+    }
+  }
+
+  conn.on("connect", onconnect);
+  conn.on("ready", onready);
+  conn.on("keyboard-interactive", onkeyboard);
+  conn.on("error", onerror);
+  conn.on("close", onclose);
+
+  conn.connect(opts);
+
+  return conn;
+}
+
+
+if (process.argv[1] == __filename) {
+  main();
+}

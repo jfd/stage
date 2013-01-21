@@ -1,0 +1,123 @@
+.\" Generated with Ronnjs 0.3.8
+.\" http://github.com/kapouer/ronnjs/
+.
+.TH "STAGE\-MASTER" "1" "January 2013" "" ""
+.
+.SH "NAME"
+\fBstage-master\fR \-\- Spawn Master
+.
+.SH "SYNOPSIS"
+.
+.nf
+stage\-master [options]
+.
+.fi
+.
+.SH "DESCRIPTION"
+Spawns a Master Server process\.
+.
+.SH "OPTIONS"
+Available options for command:
+.
+.IP "\(bu" 4
+\fB\-v\fR, \fB\-\-version\fR:
+.
+.br
+Shows current version of the command, then exit
+.
+.IP "\(bu" 4
+\fB\-\-help\fR:
+.
+.br
+Shows the manual page entry for command
+.
+.IP "\(bu" 4
+\fB\-\-usage\fR:
+.
+.br
+Show command usage, then exit
+.
+.IP "\(bu" 4
+\fB\-p\fR, \fB\-\-port <port>\fR:
+.
+.br
+Port to listen too\. Defaults to 8080
+.
+.IP "\(bu" 4
+\fB\-\-host <host>\fR:
+.
+.br
+Host to listen too\. Default to all
+.
+.IP "\(bu" 4
+\fB\-\-cachepath <path>\fR:
+.
+.br
+Path where test packages should be stored\. Default to \fIcache\fR in current workdir\.
+.
+.IP "\(bu" 4
+\fB\-\-loglevel <silent|fatal|warn|info|verb|debug>\fR:
+.
+.br
+Log level\. Defaults to \fIwarn\fR\|\.
+.
+.IP "\(bu" 4
+\fB\-\-maxjobs <number>\fR:
+.
+.br
+Maximum number of simultaneously running jobs\. Default to 5\.
+.
+.IP "\(bu" 4
+\fB\-\-token <token>\fR:
+.
+.br
+A token that remote connections must pass in order to use the API
+.
+.IP "\(bu" 4
+\fB\-\-secure\fR:
+.
+.br
+Use HTTPS and WSS instead of HTTP and WS for public interfaces\. The \fI\-\-key\fR and \fI\-\-cert\fR must be set when using the secure option (see below)\.
+.
+.IP "\(bu" 4
+\fB\-\-key <path>\fR:
+.
+.br
+Path to key file
+.
+.IP "\(bu" 4
+\fB\-\-cert <path>\fR:
+.
+.br
+Path to cert file
+.
+.IP "\(bu" 4
+\fB\-\-joblifetime <minutes>\fR:
+.
+.br
+Number of minutes before a completed job is removed from memory\. Default is 1440 (24 hours)\.
+.
+.IP "" 0
+.
+.SH "EXAMPLES"
+Spawns a new server listening to port 9000
+.
+.IP "" 4
+.
+.nf
+stage\-master \-\-port 9000
+.
+.fi
+.
+.IP "" 0
+.
+.SH "COPYRIGHT"
+Copyright (C) 2013 Johan Dahlberg \fIhttp://jfd\.github\.com\fR
+.
+.SH "SEE ALSO"
+.
+.IP "\(bu" 4
+stage\-slave(1)
+.
+.IP "" 0
+

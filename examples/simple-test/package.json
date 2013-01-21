@@ -1,0 +1,14 @@
+{
+  "author": "jfd",
+  "name": "simple-test",
+  "version": "1.0.0",
+  "dependencies": {
+  },
+  "scripts": {
+    "test": "node test.js",
+    "stagetest": "node test.js"
+  },
+  "engines": {
+    "node": ">=0.7.7"
+  }
+}

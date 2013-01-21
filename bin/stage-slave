@@ -1,0 +1,867 @@
+#!/usr/bin/env node
+
+"use strict";
+
+var exec                      = require("child_process").exec;
+var spawn                     = require("child_process").spawn;
+
+var statSync                  = require("fs").statSync;
+var readdirSync               = require("fs").readdirSync;
+var rmdirSync                 = require("fs").rmdirSync;
+var existsSync                = require("fs").existsSync;
+var unlinkSync                = require("fs").unlinkSync;
+
+var arch                      = require("os").arch;
+var platform                  = require("os").platform;
+var cpus                      = require("os").cpus;
+
+var basename                  = require("path").basename;
+var dirname                   = require("path").dirname;
+var join                      = require("path").join;
+var resolve                   = require("path").resolve;
+
+var parseUrl                  = require("url").parse;
+var formatUrl                 = require("url").format;
+
+var inherits                  = require("util").inherits;
+var log                       = require("util").log;
+
+var WebSocket                 = require("ws");
+
+var version                   = require("../lib/cliutil").version;
+var usage                     = require("../lib/cliutil").usage;
+var help                      = require("../lib/cliutil").help;
+var halt                      = require("../lib/cliutil").halt;
+var url                       = require("../lib/cliutil").url;
+var toWsUrl                   = require("../lib/cliutil").toWsUrl;
+
+var consts                    = require("../lib/consts");
+
+var JOBSTATE_NA               = consts.JOBSTATE_NA;
+var JOBSTATE_QUEUED           = consts.JOBSTATE_QUEUED;
+var JOBSTATE_INITIALIZED      = consts.JOBSTATE_INITIALIZED;
+var JOBSTATE_INSTALLING       = consts.JOBSTATE_INSTALLING;
+var JOBSTATE_INSTALLED        = consts.JOBSTATE_INSTALLED;
+var JOBSTATE_SETUP            = consts.JOBSTATE_SETUP;
+var JOBSTATE_RUNNING          = consts.JOBSTATE_RUNNING;
+var JOBSTATE_STOPPING         = consts.JOBSTATE_STOPPING;
+var JOBSTATE_FINISHED         = consts.JOBSTATE_FINISHED;
+var JOBSTATE_KILLED           = consts.JOBSTATE_KILLED;
+
+var SOP_INSTALL               = consts.SOP_INSTALL;
+var COP_INSTALL               = consts.COP_INSTALL;
+var SOP_SETUP                 = consts.SOP_SETUP;
+var COP_SETUP                 = consts.COP_SETUP;
+var SOP_START                 = consts.SOP_START;
+var COP_START                 = consts.COP_START;
+var COP_RESULT                = consts.COP_RESULT;
+var SOP_ABORT                 = consts.SOP_ABORT;
+var COP_TESTERROR             = consts.COP_TESTERROR;
+
+var LOG_FATAL                 = consts.LOG_FATAL;
+var LOG_WARN                  = consts.LOG_WARN;
+var LOG_INFO                  = consts.LOG_INFO;
+var LOG_VERBOSE               = consts.LOG_VERBOSE;
+var LOG_DEBUG                 = consts.LOG_DEBUG;
+
+var LOG_LEVELS                = consts.LOG_LEVELS;
+
+var MSGH                      = (function $(o,h){$[o]=h;});
+var CATCHSIG                  = (function $(s,c){($.s?$.s:($.s=[])).push(c);});
+var LOGHANDLER                = (function $(l,h){h.l=l;});
+
+var CONN_RECONNECTINTERVAL    = 2000;
+
+var VALID_SIGNALS             =  ["SIGUSR1", "SIGUSR2"];
+
+var DEFAULT_OPTIONS           = { "url"         : consts.DEFAULT_URL,
+                                  "loglevel"    : consts.DEFAULT_LOGLEVEL,
+                                  "cachepath"   : resolve("cache"),
+                                  "signal"      : "SIGUSR2"
+                                };
+
+var options                   = Object.create(DEFAULT_OPTIONS);
+
+
+MSGH(SOP_INSTALL,               handleInstall);
+MSGH(SOP_SETUP,                 handleSetup);
+MSGH(SOP_START,                 handleStart);
+MSGH(SOP_ABORT,                 handleAbort);
+
+LOGHANDLER(LOG_FATAL,           logError);
+LOGHANDLER(LOG_WARN,            logAlreadyInstalled);
+LOGHANDLER(LOG_WARN,            logInstallFailure);
+LOGHANDLER(LOG_WARN,            logTestError);
+LOGHANDLER(LOG_INFO,            logConnect);
+LOGHANDLER(LOG_INFO,            logReconnect);
+LOGHANDLER(LOG_INFO,            logPrepareInstall);
+LOGHANDLER(LOG_INFO,            logTestResult);
+LOGHANDLER(LOG_VERBOSE,         logClearCache);
+LOGHANDLER(LOG_VERBOSE,         logInstallSuccess);
+LOGHANDLER(LOG_VERBOSE,         logTestSetup);
+LOGHANDLER(LOG_VERBOSE,         logTestRun);
+LOGHANDLER(LOG_DEBUG,           logDebugInfo);
+LOGHANDLER(LOG_DEBUG,           logUnpacking);
+LOGHANDLER(LOG_DEBUG,           logInstalling);
+
+
+
+function main () {
+  var args = process.argv.slice(2);
+  var arg;
+
+  while ((arg = args.shift())) {
+    switch (arg) {
+
+      case "-v":
+      case "--version":
+      return version();
+
+      case "--usage":
+      return usage();
+
+      case "--help":
+      return help();
+
+      case "--url":
+      case "--hostname":
+      case "--port":
+      case "--token":
+      case "--secure":      
+      options.url = url(options.url, arg, args.shift());
+      break;
+
+      case "--cachepath":
+      options.cachepath = resolve(args.shift());
+      break;
+
+      case "--signal":
+      options.signal = (args.shift() || "").toUpperCase();
+      break;
+
+      case "--loglevel":
+      options.loglevel = LOG_LEVELS.indexOf(args.shift());
+      break;
+
+      default:
+      return halt("bad argument - " + arg);
+    }
+  }
+
+  options.url = toWsUrl(options.url);
+
+  if (existsSync(options.cachepath) == false ||
+      statSync(options.cachepath).isDirectory() == false) {
+    halt("option cache-path must be a directory");
+  }
+
+  if (isNaN(options.loglevel) ||
+      options.loglevel < 0 ||
+      options.loglevel > 5) {
+    halt("invalid log level");
+  }
+
+  if (VALID_SIGNALS.indexOf(options.signal) == -1) {
+    halt("invalid signal -- " + options.signal);
+  }
+
+  notif(logDebugInfo);
+
+  clearCache();
+  catchSignals();
+  runConnection();
+}
+
+
+function notif (handler, a, b, c) {
+  if (handler.l < options.loglevel + 1) {
+    handler.call(this, a, b, c);
+  }
+}
+
+
+function rmdirall (root) {
+  notif(logClearCache, root);
+  (function rm (path) {
+    try {
+      unlinkSync(path);
+    } catch (err) {
+      if (err.code === "ENOENT")
+        return;
+      if (err.code !== "EPERM" && err.code !== "EISDIR")
+        throw err;
+      readdirSync(path).forEach(function (filepath) {
+        rm(join(path, filepath));
+      });
+      rmdirSync(path);
+    } 
+  })(root);
+};
+
+
+function clearCache () {
+  var root = options.cachepath;
+  readdirSync(options.cachepath).forEach(function (filepath) {
+    var fullpath = join(root, filepath);
+    if (statSync(fullpath).isDirectory()) {
+      rmdirall(fullpath);
+    }
+  });
+}
+
+
+function catchSignals () {
+  process.on(options.signal, function () {
+    var callback;
+    if ((callback = CATCHSIG.s.shift())) {
+      callback();
+    }
+  });
+}
+
+
+function runConnection () {
+  var conn;
+  var url;
+
+  url = parseUrl(options.url, true);
+
+  url.search = null;
+  url.query.role = "slave";
+  url.query.platform = platform();
+  url.query.arch = arch();
+  url.query.cpus = cpus().length;
+  url.query.engineName = "node";
+  url.query.engineVersion = process.version;
+
+  url = formatUrl(url);
+
+  conn = new WebSocket(url);
+
+  conn.on("open", onopen);
+  conn.on("message", onmessage);
+  conn.on("error", onerror);
+  conn.on("close", onclose);
+
+  conn.reconnect = function () {
+    notif(logReconnect, CONN_RECONNECTINTERVAL);
+    setTimeout(runConnection, CONN_RECONNECTINTERVAL);   
+  };
+}
+
+
+function onopen () {
+  notif(logConnect, this.url);
+}
+
+
+function onmessage (msg) {
+  var handler;
+  var op;
+
+  if (!(op = msg[0]) || !(handler = MSGH[op])) {
+    this.emit("error", Error("Bad command 0x" + op.toString(16)));
+    return;
+  }
+
+  try {
+    handler.call(this, msg);
+  } catch (err) {
+    this.emit("error", err);
+  }
+}
+
+
+function onerror (err) {
+
+  // Do not trigger ERROR if we are trying to connect and
+  // host is down.
+  if (err.code != "ECONNREFUSED") {
+    notif(logError, err);
+    if (this.readyState !== 4) {
+      this.removeAllListeners("close");
+      this.close(1000);
+    }
+  }
+
+  // Kill all jobs associated with this connection
+  TestJob.byClient(this).forEach(function (job) {
+    job.client = null;
+    job.destroy(err);
+  });
+
+  this.reconnect();
+}
+
+
+function onclose (code, msg) {
+  var reason = msg && msg.toString() || "UNKNOWN_REASON";
+
+  if (code == 1002) {
+    console.error(reason);
+    process.exit(1);
+    return;
+  }
+
+  // Kill all jobs associated with this connection
+  TestJob.byClient(this).forEach(function (job) {
+    job.client = null;
+    job.destroy(Error(reason));
+  });
+
+  // Host possible down, try to reconnect...
+  this.reconnect();
+}
+
+
+function handleInstall (msg) {
+  var self = this;
+  var pkg;
+  var id;
+  var job;
+  var jobd;
+
+  id = msg.readUInt32BE(1);
+  pkg = msg.slice(5);
+
+  if (TestJob.get(id)) {
+    throw new Error("Test already in use");
+  }
+
+  job = new TestJob(id, this);
+  job.install(pkg);
+}
+
+
+function handleSetup (msg) {
+  var self = this;
+  var ctx;
+  var job;
+  var id;
+
+  id = msg.readUInt32BE(1);
+  ctx = JSON.parse(msg.toString("utf8", 5));
+
+  if ((job = TestJob.get(id))) {
+    job.setup(ctx);
+  }
+}
+
+
+function handleStart (msg) {
+  var id;
+  var job;
+
+  id = msg.readUInt32BE(1);
+
+  if ((job = TestJob.get(id))) {
+    job.run();
+  }
+}
+
+
+function handleAbort (msg) {
+  var id;
+  var job;
+  // var reason;
+
+  id = msg.readUInt32BE(1);
+  reason = msg.toString("utf8", 5);
+
+  if ((job = TestJob.get(id))) {
+    job.abort(reason);
+  }
+  
+}
+
+
+function TestJob (id, client) {
+  this.id = id;
+  this.client = client;
+  this.state = JOBSTATE_NA;
+  this.name = null
+  this.path = null
+  this.isStageTest = false;
+  this.isNpmTest = false;
+  this.execPath = null;
+  this.child = null;
+  this.task = null;
+  this.userConfig = null;
+  this.packageConfig = null;
+
+  // TODO: Rewrite this text
+  // We need to place this outside the EventEmitter because
+  // of the fact that we are living in a domain. All event
+  // handlers are removed if TestJob throws an error.
+  this.lockWaitQueue = null;
+
+  this.constructor.all[id] = this;
+}
+
+
+TestJob.all = {};
+
+
+TestJob.get = function (id) {
+  return this.all[id] || null;
+};
+
+
+TestJob.byClient = function (client) {
+  var keys = Object.keys(this.all);
+  var idx = keys.length;
+  var result = [];
+  var job;
+  while (idx--) {
+    if ((job = this.all[keys[idx]]) &&
+         job.client == client) {
+      result.push(job);
+    }
+  }
+  return result;
+};
+
+
+TestJob.getLockOwner = function (path) {
+  var keys = Object.keys(this.all);
+  var idx = keys.length;
+  var job;
+  while (idx--) {
+    if ((job = this.all[keys[idx]]) &&
+         job.isLocked() && 
+         job.path == path) {
+      return job;
+    }
+  }
+  return null;
+};
+
+
+TestJob.prototype.onchildexit = function (err, stdout, stderr) {
+  var graph;
+
+  this.child = null;
+
+  switch (this.state) {
+    
+    default:
+    this.destroy(Error("Invalid job state"));
+    break;
+
+    case JOBSTATE_SETUP:
+    this.destroy(Error("Died under setup phase"));
+    break;
+
+    case JOBSTATE_RUNNING:
+    graph = {
+      haderror    : !!err,
+      report      : stdout
+    };
+    this.send(COP_RESULT, new Buffer(JSON.stringify(graph)));
+    notif(logTestResult, this, graph);
+    this.destroy();
+    break;
+  }
+};
+
+
+TestJob.prototype.onpackageinfo = function (pkg, info) {
+  var self = this;
+  var scripts;
+
+  info = info || {};
+  scripts = info.scripts || {};
+
+  if (!info.name || !info.version) {
+    return this.destroy(new Error("Missing name and/or version in package"));
+  }
+
+  this.name = info.name + "@" + info.version;
+  this.path = resolve(options.cachepath, this.name);
+
+  this.isStageTest = "stagetest" in scripts;
+  this.isNpmTest = "test" in scripts;
+
+  this.packageConfig = info.config || {};
+
+  if (!this.isStageTest && !this.isNpmTest) {
+    return this.destroy(new Error("Missing a test to run"));
+  }
+
+  this.execPath = this.isStageTest ? scripts.stagetest
+                                 : "npm test";
+
+
+  notif(logPrepareInstall, this.path);
+  
+  // Check if another test is currently installing this
+  // package. If so, put is in a waitqueue and reply 
+  // once the package is ready to be used.
+  this.lock(function () {
+    this.unpack(pkg);
+  });
+};
+
+
+TestJob.prototype.spawnChild = function () {
+  var self = this;
+  var uconfig = this.userConfig;
+  var pconfig = this.packageConfig;
+  var opts;
+
+  opts = {
+    cwd       : this.path,
+    env       : { "STAGE_PARENT_PID"    : process.pid,
+                  "STAGE_PARENT_SIGNAL" : options.signal
+                }
+  };
+
+  for (var k in process.env) {
+    opts.env[k] = process.env[k];
+  }
+
+  // NPM provides the npm_config from package
+  // when running "npm test", so we need to
+  // provide does manually when running as a
+  // NDT test.
+  if (this.isStageTest) {
+    for (var k in pconfig) {
+      opts.env["npm_package_config_" + k] = pconfig[k];
+    }
+  }
+
+  // User provided config parameters overrides the one
+  // defined in the package.json file.
+  for (var k in uconfig) {
+    opts.env["npm_package_config_" + k] = uconfig[k];
+  }
+  
+
+  function ondone (err, stdout, stderr) {
+    self.onchildexit(err, stdout, stderr);
+  }
+
+  this.child = exec(this.execPath, opts, ondone);
+};
+
+
+TestJob.prototype.isLocked = function () {
+  return !!this.lockWaitQueue;
+};
+
+
+TestJob.prototype.lock = function (C) {
+  var self = this;
+  var owner;
+
+  if (this.isLocked()) {
+    return self.destroy(new Error("Already locked"));
+  }
+
+  if ((owner = TestJob.getLockOwner(this.path))) {
+    return owner.lockWaitQueue.push(function (remainers) {
+      self.lockWaitQueue = remainers || [];
+      C.call(self);
+    });
+  }
+
+  this.lockWaitQueue = [];
+  process.nextTick(function () {
+    C.call(self);
+  });
+};
+
+
+TestJob.prototype.unlock = function () {
+  var queue;
+  var nxt;
+  if (this.isLocked()) {
+    queue = this.lockWaitQueue;
+    this.lockWaitQueue = null;
+    if ((nxt = queue.shift())) {
+      process.nextTick(function () {
+        nxt(queue);
+      });
+    } else {
+      rmdirall(this.path);
+    }
+  }
+};
+
+
+TestJob.prototype.install = function (pkg) {
+  var task;
+  task = this.exec("tar -xO ./package.json", function (stdout) {
+    this.onpackageinfo(pkg, JSON.parse(stdout));
+  });
+  task.stdin.end(pkg);
+};
+
+
+TestJob.prototype.unpack = function (pkg) {
+
+  // Check if package already is installed, if so, no
+  // need to do it again. Just reply with callback.
+  if (existsSync(this.path)) {
+    this.state = JOBSTATE_INSTALLED;
+    this.send(COP_INSTALL);
+    notif(logAlreadyInstalled, this);
+    return;
+  }
+
+  notif(logUnpacking, this.path);
+
+  this.exec("mkdir -p " + this.path, function () {
+    var task;
+    task = this.exec("tar x -C" + this.path, function () {
+      this.npmInstall();
+    });
+    task.stdin.end(pkg);
+  });
+};
+
+
+TestJob.prototype.npmInstall = function () {
+  var cmd;
+
+  notif(logInstalling, this.path);
+
+  cmd = "cd " + this.path + " && npm install --dev && cd " + process.cwd();
+
+  this.exec(cmd, function (stdout) {
+    this.state = JOBSTATE_INSTALLED;
+    this.send(COP_INSTALL);
+    notif(logInstallSuccess, this);
+  });
+};
+
+
+TestJob.prototype.setup = function (config) {
+  var self = this;
+
+  this.userConfig = config;
+
+  this.state = JOBSTATE_SETUP;
+
+  notif(logTestSetup, this);
+
+  if (this.isStageTest) {
+    this.spawnChild();
+    CATCHSIG(options.signal, function () {
+      self.send(COP_SETUP);
+    });
+  } else {
+    // Just send back that setup is ready
+    this.send(COP_SETUP);
+  }
+};
+
+
+TestJob.prototype.run = function () {
+  this.state = JOBSTATE_RUNNING;
+  notif(logTestRun, this);
+  if (this.isStageTest) {
+    process.kill(this.child.pid, options.signal);
+  } else {
+    this.spawnChild();
+  }
+};
+
+
+TestJob.prototype.abort = function (reason) {
+  this.client = null;
+  this.destroy(Error(reason));
+};
+
+
+TestJob.prototype.exec = function (cmd, C) {
+  var self = this;
+
+  function onexit (err, stdout, stderr) {
+    if (err) {
+      if (self.task) {
+        self.task = null;
+        self.destroy(new Error(stderr));
+      }
+      return;
+    } 
+    self.task = null;
+    try {
+      C.call(self, stdout);
+    } catch (err) {
+      self.destroy(err);
+    }
+  }
+
+  this.task = exec(cmd, onexit);
+
+  return this.task;
+};
+
+
+TestJob.prototype.send = function (op, data) {
+  var resp;
+
+  try {
+    if (data) {
+      resp = new Buffer(5 + data.length);
+      resp.writeUInt8(op, 0);
+      resp.writeUInt32BE(this.id, 1);
+      data.copy(resp, 5);
+      this.client.send(resp, { binary: true });
+    } else {
+      resp = new Buffer(5);
+      resp.writeUInt8(op, 0);
+      resp.writeUInt32BE(this.id, 1);
+      this.client.send(resp, { binary: true });
+    }
+  } catch (err) {
+    this.destroy(err);
+  }
+};
+
+
+TestJob.prototype.destroy = function (err) {
+  var reason;
+  var client;
+  var id;
+
+  if (this.child) {
+    this.child.kill("SIGKILL");
+    this.child = null;
+  }
+
+  if (this.task) {
+    this.task.kill("SIGKILL");
+    this.task = null;
+  }
+
+  if (!this.id) {
+    return;
+  }
+
+  if (err) {
+    reason = new Buffer((err && err.message) || "UNKNOWN_ERROR");
+    notif(logTestError, this, err);
+
+    if (this.client) {
+      try {
+        sendTo(this.client, COP_TESTERROR, this.id, reason);
+      } catch (er) {
+      } 
+    }
+  }
+
+  delete this.constructor.all[this.id];
+
+  this.id = null;
+  this.client = null;
+
+  this.unlock();
+};
+
+
+function sendTo (client, op, id, data) {
+  var resp;
+
+  if (data) {
+    resp = new Buffer(5 + data.length);
+    resp.writeUInt8(op, 0);
+    resp.writeUInt32BE(id, 1);
+    data.copy(resp, 5);
+    client.send(resp, { binary: true });
+  } else {
+    resp = new Buffer(5);
+    resp.writeUInt8(op, 0);
+    resp.writeUInt32BE(id, 1);
+    client.send(resp, { binary: true });
+  }
+}
+
+
+function logError (err) {
+  console.error("------------------- APP ERROR -------------------");
+  console.error(err && err.stack);
+  console.error("-------------------------------------------------");  
+}
+
+
+function logDebugInfo () {
+  log("WARNING: Slave is running in debug-mode");
+}
+
+
+function logConnect (url) {
+  log("Connection established with " + parseUrl(url).hostname);
+}
+
+
+function logReconnect (time) {
+  log("Trying to reconnect in " + (time / 1000) + " sec...");
+}
+
+
+function logClearCache (path) {
+  log("Clearing cache entry " + path);
+}
+
+
+function logPrepareInstall (path) {
+  log("Installing package " + basename(path));
+}
+
+
+function logAlreadyInstalled (job) {
+  var path = job.path;
+  log("Package " + basename(path) + " is already cached, ignoring..");
+}
+
+
+function logUnpacking (path) {
+  log("Unpacking package " + basename(path) + " to " + dirname(path));
+}
+
+
+function logInstalling (path) {
+  log("Running 'npm install' on package " + basename(path));
+}
+
+
+function logInstallSuccess (job) {
+  var path = job.path;
+  log("Package " + basename(path) + " was successfully installed");
+}
+
+
+function logInstallFailure (err, path) {
+  path = path || "UNKNOWN_PATH";
+  log("Failed to install package " + path + " reason: " + err.message);
+}
+
+
+function logTestResult (job, report) {
+  var er = report.haderror ? "with errors." : "without errors.";
+  log("Test #" + job.id + "(" + job.name + ") is complete, " + er);
+}
+
+
+function logTestError (job, err) {
+  var reason = (err && err.message) || "UNKNOWN_REASON";
+  log("Test #" + job.id + " failed to complete, reason:" + reason);
+  console.error(err.stack);
+}
+
+
+function logTestSetup (job) {
+  log("Test #" + job.id + "(" + job.name + ") is initializing...");
+}
+
+
+function logTestRun (job) {
+  log("Test #" + job.id + "(" + job.name + ") is now running...");
+}
+
+
+if (process.argv[1] == __filename) {
+  main();
+}

@@ -1,0 +1,121 @@
+#!/usr/bin/env node
+
+"use strict";
+
+var runJob                    = require("../lib/api").runJob;
+
+var version                   = require("../lib/cliutil").version;
+var usage                     = require("../lib/cliutil").usage;
+var help                      = require("../lib/cliutil").help;
+var halt                      = require("../lib/cliutil").halt;
+var url                       = require("../lib/cliutil").url;
+var toHttpUrl                 = require("../lib/cliutil").toHttpUrl;
+
+var consts                    = require("../lib/consts");
+
+
+var DEFAULT_OPTIONS           = { "url"         : consts.DEFAULT_URL,
+                                  "json"      : false,
+                                  "name"      : null,
+                                  "clients"   : 0,
+                                  "config"    : {}
+                                };
+
+
+var options                   = Object.create(DEFAULT_OPTIONS);
+
+
+function main () {
+  var args = process.argv.slice(2);
+  var parseconfig;
+  var arg;
+  var params;
+
+  while ((arg = args.shift())) {
+
+    if (parseconfig) {
+
+      if (/^--/.test(arg)) {
+        options.config[arg.substr(2)] = args.shift();
+      } else {
+        halt("bad config option " + arg);
+      }
+
+      continue;
+    }
+
+    switch (arg) {
+
+      case "-v":
+      case "--version":
+      return version();
+
+      case "--usage":
+      return usage("PACKAGE");
+
+      case "--help":
+      return help();
+
+      case "--url":
+      case "--hostname":
+      case "--port":
+      case "--token":
+      case "--secure":      
+      options.url = url(options.url, arg, args.shift());
+      break;
+
+      case "--json":
+      options.json = true;
+      break;
+
+      case "--clients":
+      options.clients = parseInt(args.shift());
+      break;
+
+      case "--":
+      parseconfig = true;
+      break;
+
+      default:
+
+      if (arg[0] == "-") {
+        halt("unknown option " + arg);
+      }
+      
+      options.name = arg;
+      break;
+    }
+  }
+
+  options.url = toHttpUrl(options.url);
+
+  if (!options.name || !options.name.length) {
+    halt("expected name of package");
+  }
+
+  if (isNaN(options.clients) || options.clients < 0) {
+    halt("clients - expected a postiive number or 0");
+  }
+
+  params = {
+    clients    : options.clients
+  };
+
+  runJob(options.url, options.name, params, options.config,
+    function (err, job) {
+      if (err) {
+        halt(err.message);
+      }
+
+      if (options.json) {
+        return console.log(JSON.stringify(job));
+      }
+
+      console.log("Test '%s' started with id #%s", job.name, job.id);
+  });
+}
+
+
+if (process.argv[1] == __filename) {
+  main();
+}
