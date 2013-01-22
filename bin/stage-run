@@ -51,7 +51,7 @@ function main () {
       return version();
 
       case "--usage":
-      return usage("PACKAGE");
+      return usage("<package>");
 
       case "--help":
       return help();
