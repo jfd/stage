@@ -14,7 +14,7 @@ var toHttpUrl                 = require("../lib/cliutil").toHttpUrl;
 var consts                    = require("../lib/consts");
 
 
-var DEFAULT_OPTIONS           = { "url"         : consts.DEFAULT_URL,
+var DEFAULT_OPTIONS           = { "url"       : consts.DEFAULT_URL,
                                   "json"      : false,
                                   "name"      : null,
                                   "clients"   : 0,
