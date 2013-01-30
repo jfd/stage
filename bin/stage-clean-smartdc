@@ -4,8 +4,6 @@
 
 var exec                      = require('child_process').exec;
 
-var readFileSync              = require('fs').readFileSync;
-
 var resolve                   = require('path').resolve;
 
 var createInterface           = require('readline').createInterface;
