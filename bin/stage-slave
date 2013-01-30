@@ -77,7 +77,8 @@ var VALID_SIGNALS             =  ["SIGUSR1", "SIGUSR2"];
 var DEFAULT_OPTIONS           = { "url"         : consts.DEFAULT_URL,
                                   "loglevel"    : consts.DEFAULT_LOGLEVEL,
                                   "cachepath"   : resolve("cache"),
-                                  "signal"      : "SIGUSR2"
+                                  "signal"      : "SIGUSR2",
+                                  "forkmode"    : false
                                 };
 
 var options                   = Object.create(DEFAULT_OPTIONS);
@@ -143,10 +144,18 @@ function main () {
       options.loglevel = LOG_LEVELS.indexOf(args.shift());
       break;
 
+      case "--forkmode":
+      options.forkmode = true;
+      break;
+
       default:
       return halt("bad argument - " + arg);
     }
   }
+
+  if (options.forkmode && typeof process.send !== 'function') {
+    halt("started in fork-mode, but process is missing comm-channel");
+  } 
 
   options.url = toWsUrl(options.url);
 
@@ -252,6 +261,9 @@ function runConnection () {
 
 function onopen () {
   notif(logConnect, this.url);
+  if (options.forkmode) {
+    process.send({ url: this.url });
+  }
 }
 
 

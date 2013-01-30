@@ -46,6 +46,9 @@ Available options for command:
 * `--signal <SIGUSR1|SIGUSR2>`:  
     Signal used to communicate with tests.
 
+* `--forkmode`:  
+    Starts process in `forkmode`. Sends a `{ url: <url> }`-message to parent process, each time connected to the Master process.
+
 ## EXAMPLES
 
 Spawns a new Slave Server that connects to a running Master Server on 127.0.0.1:9000:
