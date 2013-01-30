@@ -1,9 +1,9 @@
-stage-setup-smartdc(1) -- Installs dependencies on a remote machine via SSH.
-============================================================================
+stage-setup-smartdc(1) -- Setup Stage on a new SmartDC machine
+==============================================================
 
 ## SYNOPSIS
 
-    stage-setup-smatdc [options] <master|slave>
+    stage-setup-smartdc [options] <master|slave>
 
 ## DESCRIPTION
 
