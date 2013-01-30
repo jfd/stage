@@ -16,10 +16,6 @@ var version                   = require('../lib/cliutil').version;
 var usage                     = require('../lib/cliutil').usage;
 var help                      = require('../lib/cliutil').help;
 var halt                      = require('../lib/cliutil').halt;
-var url                       = require('../lib/cliutil').url;
-var toHttpUrl                 = require('../lib/cliutil').toHttpUrl;
-
-var consts                    = require('../lib/consts');
 
 var VERSION                   = require('../package').version;
 
