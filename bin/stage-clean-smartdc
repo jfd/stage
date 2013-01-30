@@ -87,13 +87,7 @@ function main () {
       break;
 
       default:
-
-      if (arg[0] == '-') {
-        halt('unknown option ' + arg);
-      }
-
-      options.type = arg;
-      break;
+      return halt("bad argument - " + arg);
     }
   }
 
