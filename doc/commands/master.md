@@ -67,4 +67,6 @@ Copyright (C) 2013 Johan Dahlberg <http://jfd.github.com>
 
 ## SEE ALSO
 
+* stage(1)
 * stage-slave(1)
+* stage-localenv(1)

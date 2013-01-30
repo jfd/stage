@@ -70,3 +70,4 @@ Copyright (C) 2013 Johan Dahlberg <http://jfd.github.com>
 
 * stage(1)
 * stage-master(1)
+* stage-localenv(1)
