@@ -51,6 +51,9 @@ Available options for command:
 
 * `--joblifetime <minutes>`:  
     Number of minutes before a completed job is removed from memory. Default is 1440 (24 hours).
+
+* `--forkmode`:  
+        Starts process in `forkmode`. Server listen to a random port and sends the `address` and `port` in a message to parent process.
     
 ## EXAMPLES
 

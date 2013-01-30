@@ -103,6 +103,7 @@ var CONTENT_TYPES             = { ".html"       : "text/html",
 var DEFAULT_OPTIONS           = { "host"        : null,
                                   "token"       : null,
                                   "port"        : 8080,
+                                  "forkmode"    : false,
                                   "maxjobs"     : 5,
                                   "loglevel"    : consts.DEFAULT_LOGLEVEL,
                                   "cachepath"   : resolve("cache"),
@@ -212,10 +213,18 @@ function main () {
       options.lifetime = parseInt(args.shift());
       break;
 
+      case "--forkmode":
+      options.forkmode = true;
+      break;
+
       default:
       return halt("bad argument - " + arg);
     }
   }
+
+  if (options.forkmode && typeof process.send !== 'function') {
+    halt("started in fork-mode, but process is missing comm-channel");
+  } 
 
   if (options.secure && existsSync(options.key) == false) {
     halt("specified key does not exists");
@@ -296,14 +305,21 @@ function runServer () {
   serverDomain.add(http);
   serverDomain.add(ws);
 
-  http.listen(options.port, options.host);
+  if (options.forkmode == false) {
+    http.listen(options.port, options.host);
+  } else {
+    http.listen();
+  }
 
   http.on("error", function (err) {
     console.log(err.message);
   });
 
-  http.on("listening", function () {
-    notif(logServerListen, options.port, options.host);
+  http.on("listening", function () {    
+    notif(logServerListen, http.address().port, http.address().address);
+    if (options.forkmode) {
+      process.send({ address: http.address() });
+    }
   });
 }
 
