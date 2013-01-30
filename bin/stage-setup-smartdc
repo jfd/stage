@@ -15,6 +15,7 @@ var usage                     = require("../lib/cliutil").usage;
 var help                      = require("../lib/cliutil").help;
 var halt                      = require("../lib/cliutil").halt;
 var url                       = require("../lib/cliutil").url;
+var getJsonOutput             = require("../lib/cliutil").getJsonOutput;
 
 var consts                    = require("../lib/consts");
 
@@ -304,23 +305,6 @@ function createAndSetupMachines (count, C) {
     exec("sdc-createmachine", getJsonOutput(oncreated));
 
   })(count);
-}
-
-
-
-function getJsonOutput (C) {
-  return function (err, stdout, stderr) {
-    var graph;
-    if (err) {
-      return C(new Error(stderr));
-    }
-    try {
-      graph = JSON.parse(stdout);
-    } catch (err) {
-      return C(err);
-    }
-    return C(null, graph);
-  };
 }
 
 
