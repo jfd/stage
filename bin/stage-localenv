@@ -1,0 +1,232 @@
+#!/usr/bin/env node
+
+'use strict';
+
+var fork                      = require('child_process').fork;
+var spawn                     = require('child_process').spawn;
+
+var resolve                   = require('path').resolve;
+
+var parseUrl                  = require('url').parse;
+var format                    = require('util').format;
+
+var TempDir                   = require("temporary/lib/dir");
+
+var version                   = require('../lib/cliutil').version;
+var usage                     = require('../lib/cliutil').usage;
+var help                      = require('../lib/cliutil').help;
+var halt                      = require('../lib/cliutil').halt;
+var url                       = require('../lib/cliutil').url;
+var toHttpUrl                 = require('../lib/cliutil').toHttpUrl;
+
+var consts                    = require('../lib/consts');
+
+var VERSION                   = require('../package').version;
+
+var MASTER_CMD                = resolve(__dirname, "./stage-master");
+var SLAVE_CMD                 = resolve(__dirname, "./stage-slave");
+
+var DEFAULT_OPTIONS           = { 'noshell'   : false
+                                };
+
+
+var options                   = Object.create(DEFAULT_OPTIONS);
+
+
+function main () {
+  var args = process.argv.slice(2);
+  var arg;
+  var params;
+  var master;
+  var slave;
+  var tmpmaster;
+  var tmpslave;
+
+  while ((arg = args.shift())) {
+
+    switch (arg) {
+
+      case '-v':
+      case '--version':
+      return version();
+
+      case '--usage':
+      return usage('');
+
+      case '--help':
+      return help();
+
+      case '--noshell':
+      options.noshell = true;
+      break;
+
+      default:
+      return halt("bad argument - " + arg);
+    }
+  }
+
+  function onmasterforked (err, address) {
+    var url;
+
+    if (err) {
+      shutdown(err.message || err.stack);
+    }
+
+    log('- Stage Master process spawned, listening to %s:%s...',
+        address.address, address.port);
+
+    url = 'http://' + address.address + ':' + address.port + '/';
+    
+    process.env['STAGE_URL'] = url;
+
+    tmpslave = new TempDir;
+
+    slave = forkint(SLAVE_CMD, tmpslave.path, onslaveforked);
+  }
+
+  function onslaveforked (err, url) {
+    if (err) {
+      shutdown(err.message || err.stack);
+    }
+
+    url = parseUrl(url);
+
+    log('- Stage Slave process spawned, connected to %s...', url.host);
+
+    if (!options.noshell) {
+      log('- Starting a new shell session...');
+      spawnShell(onshellexit);
+    }
+  }
+
+  function onshellexit () {
+    shutdown();
+  };
+
+  function shutdown (msg) {
+
+    if (slave) {
+      if (!msg) {
+        log('- Shutting down Stage Slave process...');
+      }
+      slave.kill('SIGKILL');
+      slave = null;
+    }
+
+    if (master) {
+      if (!msg) {
+        log('- Shutting down Stage Master process...');
+      }
+      master.kill('SIGKILL');
+      master = null;
+    }
+
+    log('- Cleaning up...');
+
+    if (tmpslave) {
+      tmpslave.rmdir();
+      tmpslave = null;
+    }
+
+    if (tmpmaster) {
+      tmpmaster.rmdir();
+      tmpmaster = null;
+    }
+
+    if (msg) {
+      halt(msg);
+    } else {
+      process.exit(0);
+    }
+  }
+
+  log('- Stage local environment is %s starting...', VERSION);
+
+  tmpmaster = new TempDir;
+  master = forkint(MASTER_CMD, tmpmaster.path, onmasterforked);
+}
+
+
+function log () {
+  if (!options.noshell) {
+    process.stdout.write(format.apply(null, arguments) + "\n");
+  }
+}
+
+
+function forkint (cmd, cachepath, C) {
+  var child;
+  var args;
+  var opts;
+  var stderr = '';
+
+  function onexit (code) {
+    child.removeListener('exit', onexit);
+    child.removeListener('message', onhandshake);
+    if (child.stderr) {
+      child.stderr.removeListener('data', onstderr);
+    }
+    return C(new Error(stderr));
+  }
+
+  function onstderr (chunk) {
+    stderr += chunk;
+  }
+
+  function onhandshake (msg) {
+    child.removeListener('exit', onexit);
+    child.removeListener('message', onhandshake);
+    if (child.stderr) {
+      child.stderr.removeListener('data', onstderr);
+    }
+
+    if (cmd == MASTER_CMD) {
+      if (!msg || !msg.address) {
+        return C(new Error('Bad handshake from Master'));
+      }
+      return C(null, msg.address);
+    } else {
+      if (!msg || !msg.url) {
+        return C(new Error('Bad handshake from Slave'));
+      }
+      return C(null, msg.url);
+    }
+  }
+
+  args = ['--forkmode',
+          '--cachepath', cachepath,
+          '--loglevel', 'debug'];
+
+  opts = { silent: !options.noshell };
+
+  child = fork(cmd, args, opts);
+  child.on('message', onhandshake);
+  child.on('exit', onexit);
+
+  if (child.stderr) {
+    child.stderr.on('data', onstderr);
+  }
+  
+  return child;
+}
+
+
+function spawnShell (C) {
+  var usershell = process.env['SHELL'] || '/bin/sh';
+  var url;
+  var child;
+
+  url = process.env['STAGE_URL'];
+
+  console.log('\nNavigate to `%s` for server dashboard', url);
+  console.log('Type `exit` to quit this shell and shutdown servers\n');
+
+  child = spawn(usershell, [], { customFds : [0, 1, 2] });
+
+  child.on('exit', C);
+}
+
+
+if (process.argv[1] == __filename) {
+  main();
+}

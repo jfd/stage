@@ -12,6 +12,7 @@ Most common used commands for stage:
   help          Shows available commands for stage (this section)
   install       Installs a test package on master process
   jobs          List all running and finished jobs on master process
+  localenv      Creates a local environment with a Master and a Slave running
   master        Spawns a master process
   run           Runs a test package on master process
   slave         Spawns a slave process
@@ -95,6 +96,11 @@ function main () {
     case "c":
     case "clients":
     process.argv[1] = resolve("./stage-clients");
+    break;
+
+    case "l":
+    case "localenv":
+    process.argv[1] = resolve("./stage-localenv");
     break;
 
     case "j":
