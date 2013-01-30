@@ -1,0 +1,87 @@
+.\" Generated with Ronnjs 0.3.8
+.\" http://github.com/kapouer/ronnjs/
+.
+.TH "STAGE\-LOCALENV" "1" "January 2013" "" ""
+.
+.SH "NAME"
+\fBstage-localenv\fR \-\- Local testing environment
+.
+.SH "SYNOPSIS"
+.
+.nf
+stage\-localenv [options]
+.
+.fi
+.
+.SH "DESCRIPTION"
+Creates a local environment with both a Master and a Slave running\. All test packages are stored in temporary folders and are removed after exit\.
+.
+.SH "OPTIONS"
+Available options for command:
+.
+.IP "\(bu" 4
+\fB\-v\fR, \fB\-\-version\fR:
+.
+.br
+Shows current version of the command, then exit
+.
+.IP "\(bu" 4
+\fB\-\-help\fR:
+.
+.br
+Shows the manual page entry for command
+.
+.IP "\(bu" 4
+\fB\-\-usage\fR:
+.
+.br
+Show command usage, then exit
+.
+.IP "\(bu" 4
+\fB\-\-noshell\fR:
+.
+.br
+Do not start a shell after servers are runnning\. The output from servers are piped to current process with \fB\-\-loglevel\fR set to \fBdebug\fR\|\.
+.
+.IP "" 0
+.
+.SH "EXAMPLES"
+Setup a local environment and then start a shell:
+.
+.IP "" 4
+.
+.nf
+stage\-localenv
+.
+.fi
+.
+.IP "" 0
+.
+.P
+Setup a local environment and pipe all output to current process:
+.
+.IP "" 4
+.
+.nf
+stage\-localenv \-\-noshell
+.
+.fi
+.
+.IP "" 0
+.
+.SH "COPYRIGHT"
+Copyright (C) 2013 Johan Dahlberg \fIhttp://jfd\.github\.com\fR
+.
+.SH "SEE ALSO"
+.
+.IP "\(bu" 4
+stage(1)
+.
+.IP "\(bu" 4
+stage\-master(1)
+.
+.IP "\(bu" 4
+stage\-slave(1)
+.
+.IP "" 0
+

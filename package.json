@@ -18,6 +18,7 @@
     "man/collect.1",
     "man/install.1",
     "man/jobs.1",
+    "man/localenv.1",
     "man/master.1",
     "man/run.1",
     "man/slave.1",

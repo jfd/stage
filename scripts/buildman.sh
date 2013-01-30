@@ -9,6 +9,7 @@ targets=(
   "doc/commands/clients.md" "man/clients.1"
   "doc/commands/install.md" "man/install.1"
   "doc/commands/jobs.md" "man/jobs.1"
+  "doc/commands/localenv.md" "man/localenv.1"
   "doc/commands/master.md" "man/master.1"
   "doc/commands/run.md" "man/run.1"
   "doc/commands/slave.md" "man/slave.1"

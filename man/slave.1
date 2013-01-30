@@ -85,6 +85,12 @@ Log level\. Defaults to \fIwarn\fR\|\.
 .br
 Signal used to communicate with tests\.
 .
+.IP "\(bu" 4
+\fB\-\-forkmode\fR:
+.
+.br
+Starts process in \fBforkmode\fR\|\. Sends a \fB{ url: <url> }\fR\-message to parent process, each time connected to the Master process\.
+.
 .IP "" 0
 .
 .SH "EXAMPLES"
@@ -118,6 +124,9 @@ stage(1)
 .
 .IP "\(bu" 4
 stage\-master(1)
+.
+.IP "\(bu" 4
+stage\-localenv(1)
 .
 .IP "" 0
 
