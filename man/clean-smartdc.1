@@ -1,20 +1,20 @@
 .\" Generated with Ronnjs 0.3.8
 .\" http://github.com/kapouer/ronnjs/
 .
-.TH "STAGE\-SETUP\-SMARTDC" "1" "January 2013" "" ""
+.TH "STAGE\-CLEAN\-SMARTDC" "1" "January 2013" "" ""
 .
 .SH "NAME"
-\fBstage-setup-smartdc\fR \-\- Setup Stage on a new SmartDC machine
+\fBstage-clean-smartdc\fR \-\- Stops and deletes all your SmartDC machines
 .
 .SH "SYNOPSIS"
 .
 .nf
-stage\-setup\-smartdc [options] <master|slave>
+stage\-clean\-smartdc [options]
 .
 .fi
 .
 .SH "DESCRIPTION"
-Creates a new machine (or machines) on Joyent SmartDC and then installs \fIstage\fR with depencencies via SSH\.
+Cleans (stops and deletes) your SmartDC machine pool\. This command stops and deletes \fBall\fR available machines, so use with caution\.
 .
 .SH "OPTIONS"
 Available options for command:
@@ -56,40 +56,16 @@ See \fI\-\-quiet\fR
 More verbose output
 .
 .IP "\(bu" 4
-\fB\-\-reconnect\-attempts <attempts>\fR:
+\fB\-\-ignore\-confirm\fR:
 .
 .br
-Number of reconnect attempts\. Defaults to 50
+Do not show the confirm prompt (run command without confirmation)\.
 .
 .IP "\(bu" 4
-\fB\-\-remote\-port <port>\fR:
+\fB\-\-no\-of\-attempts <number>\fR:
 .
 .br
-The \fIport\fR in which the target machine(s) should listen for public connections\. This option is only valid if target is \fI<master>\fR
-.
-.IP "\(bu" 4
-\fB\-\-remote\-loglevel <silent|fatal|warn|info|verb|debug>\fR:
-.
-.br
-The \fIloglevel\fR for the remote target machine(s)\. This option is only valid if target is \fI<master>\fR
-.
-.IP "\(bu" 4
-\fB\-\-remote\-maxjobs <number>\fR:
-.
-.br
-Maximum number of simultaneously running jobs  which the target machine(s) should work on\. This option is only valid if target is \fI<master>\fR
-.
-.IP "\(bu" 4
-\fB\-\-remote\-token <token>\fR:
-.
-.br
-The \fItoken\fR for the target machine(s)\. This option is only valid if target is \fI<master>\fR
-.
-.IP "\(bu" 4
-\fB\-\-remote\-url <url>\fR:
-.
-.br
-The \fIurl\fR in which the target machine(s) should connect to\. This option is only valid if target is \fI<slave>\fR
+Number of stop/delete attempts per machine\. Default=5
 .
 .IP "\(bu" 4
 \fB\-\-sdcurl <url>\fR:
@@ -118,24 +94,12 @@ Path to the SSH/RSA key associated with your Joyent account
 .IP "" 0
 .
 .SH "EXAMPLES"
-Creates a new machine on Joyent SmartDC and then install and starts a Master Server:
+Deletes all machines without confirmation:
 .
 .IP "" 4
 .
 .nf
-stage\-setup\-smartdc master
-.
-.fi
-.
-.IP "" 0
-.
-.P
-Creates five new Joyent SmartDC machines and then installs Stage Slave Server on them:
-.
-.IP "" 4
-.
-.nf
-stage\-setup\-smartdc slave \-\-no\-of\-machines 5
+stage\-clean\-smartdc \-\-ignore\-confirm
 .
 .fi
 .
@@ -180,7 +144,7 @@ stage(1)
 stage\-setup\-machine(1)
 .
 .IP "\(bu" 4
-stage\-clean\-smartdc(1)
+stage\-setup\-smartdc(1)
 .
 .IP "" 0
 

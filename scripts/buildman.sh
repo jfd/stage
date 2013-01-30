@@ -17,6 +17,7 @@ targets=(
   "doc/commands/uninstall.md" "man/uninstall.1"
   "doc/commands/setup-machine.md" "man/setup-machine.1"
   "doc/commands/setup-smartdc.md" "man/setup-smartdc.1"
+  "doc/commands/clean-smartdc.md" "man/clean-smartdc.1"
   "doc/commands/init-test.md" "man/init-test.1"
 )
 

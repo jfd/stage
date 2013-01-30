@@ -26,7 +26,8 @@
     "man/uninstall.1",
 
     "man/setup-machine.1",
-    "man/setup-smartdc.1"
+    "man/setup-smartdc.1",
+    "man/clean-smartdc.1"
   ],
   "dependencies": {
 		"ws": "~0.4.22",
