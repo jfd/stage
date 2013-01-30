@@ -2,7 +2,7 @@
   "author": "Johan Dahlberg <dahlberg.johan@gmail.com> (jfd.github.com)",
   "name": "stage",
   "description": "Distributed testing for Node.js",
-  "version": "0.8.1",
+  "version": "0.8.2",
   "bin": {
     "stage": "./bin/stage"
   },
