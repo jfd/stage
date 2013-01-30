@@ -95,3 +95,4 @@ Copyright (C) 2013 Johan Dahlberg <http://jfd.github.com>
 
 * stage(1)
 * stage-setup-machine(1)
+* stage-clean-smartdc(1)
