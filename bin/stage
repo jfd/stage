@@ -23,6 +23,7 @@ Built-in maintenance commands:
   init-test     Initializes a test template.
   setup-machine Installs dependencies on a remote machine via SSH.
   setup-smartdc Installs dependencies on a SmartDC machine.
+  clean-smartdc Removes all SmartDC machines.
 
 See 'stage <command> --help' for more information on a specific command.
 */
@@ -45,6 +46,7 @@ var existsSync                = require("fs").existsSync;
 
 var BUILTIN_EXTRAS            = [ resolve("./stage-setup-machine"),
                                   resolve("./stage-setup-smartdc"),
+                                  resolve("./stage-clean-smartdc"),
                                   resolve("./stage-init-test")
                                 ];
 

@@ -1,0 +1,280 @@
+#!/usr/bin/env node
+
+'use strict';
+
+var exec                      = require('child_process').exec;
+
+var readFileSync              = require('fs').readFileSync;
+
+var resolve                   = require('path').resolve;
+
+var createInterface           = require('readline').createInterface;
+
+var format                    = require('util').format;
+
+var version                   = require('../lib/cliutil').version;
+var usage                     = require('../lib/cliutil').usage;
+var help                      = require('../lib/cliutil').help;
+var halt                      = require('../lib/cliutil').halt;
+var url                       = require('../lib/cliutil').url;
+var getJsonOutput             = require('../lib/cliutil').getJsonOutput;
+
+
+var consts                    = require('../lib/consts');
+
+
+var DEFAULT_OPTIONS           = { 'json'        : false,
+                                  'sdcUrl'      : process.env['SDC_CLI_URL'],
+                                  'sdcAccount'  : process.env['SDC_CLI_ACCOUNT'],
+                                  'sdcKeyId'    : process.env['SDC_CLI_KEY_ID'],
+                                  'sdcIdentity' : process.env['SDC_CLI_IDENTITY'],
+                                  'tries'       : 5,
+                                  'noconfrim'   : false,
+                                  'quiet'       : false,
+                                  'debug'       : true
+                                };
+
+
+var options                   = Object.create(DEFAULT_OPTIONS);
+
+
+function main () {
+  var args = process.argv.slice(2);
+  var arg;
+
+  while ((arg = args.shift())) {
+    switch (arg) {
+
+      case '-v':
+      case '--version':
+      return version();
+
+      case '--usage':
+      return usage('<master|slave>');
+
+      case '--help':
+      return help();
+
+      case '--silent':
+      case '--quiet':
+      options.quiet = true;
+      break;
+
+      case '--no-of-attempts':
+      options.tries = parseInt(options.tries);
+      break;
+
+      case '--ignore-confirm':
+      options.noconfirm = true;
+      break;
+
+      case '--debug':
+      options.debug = true;
+      break;
+
+      case '--sdcurl':
+      options.sdcUrl = args.shift();
+      break;
+
+      case '--account':
+      options.sdcAccount = args.shift();
+      break;
+
+      case '--keyid':
+      options.sdcKeyId = args.shift();
+      break;
+
+      case '--identity':
+      options.sdcIdentity = args.shift();
+      break;
+
+      default:
+
+      if (arg[0] == '-') {
+        halt('unknown option ' + arg);
+      }
+
+      options.type = arg;
+      break;
+    }
+  }
+
+  try {
+    require.resolve('smartdc');
+  } catch (err) {
+    halt('smartdc module is missing\nInstall smartdc by issuing the command:' +
+         '\n\n  npm install smartdc -g\n');
+  }
+
+  if ('SDC_CLI_URL' in process.env == false) {
+    if (!options.sdcUrl) {
+      halt('expected --sdcurl or environment variable SDC_CLI_URL');
+    }
+    process.env['SDC_CLI_URL'] = options.sdcUrl;
+  }
+
+  if ('SDC_CLI_ACCOUNT' in process.env == false) {
+    if (!options.sdcAccount) {
+      halt('expected --account or environment variable SDC_CLI_ACCOUNT');
+    }
+    process.env['SDC_CLI_ACCOUNT'] = options.sdcAccount;
+  }
+
+  if ('SDC_CLI_KEY_ID' in process.env == false) {
+    if (!options.sdcKeyId) {
+      halt('expected --keyId or environment variable SDC_CLI_KEY_ID');
+    }
+    process.env['SDC_CLI_KEY_ID'] = options.sdcKeyId;
+  }
+
+  if ('SDC_CLI_IDENTITY' in process.env == false) {
+    if (!options.sdcIdentity) {
+      halt('expected --identity or environment variable SDC_CLI_IDENTITY');
+    }
+    process.env['SDC_CLI_IDENTITY'] = options.sdcIdentity;
+  }
+
+  if (isNaN(options.tries)) {
+    halt("--no-of-attempts must be a number");
+  }
+
+  function onconfirm (err, ok) {
+
+    if (!ok) {
+      return process.exit(1);
+    }
+
+    exec('sdc-listmachines', getJsonOutput(onmachinelist));
+  }
+
+
+  function onmachinelist (err, list) {
+    var count;
+    var result;
+
+    if (err) {
+      halt(err.message || err.stack);
+    }
+
+    if (list.length == 0) {
+      if (options.json) {
+        console.log(JSON.stringify({ machines: [] }));
+      } else {
+        console.log('Could not find any machines to delete');
+      }
+      return process.exit(0)
+    }
+
+    log('Found %s machine(s)...', list.length);
+
+    count = list.length;
+
+    result = { machines: [] };
+
+    function onstopdelete (err, id) {
+
+      if (err) {
+        log('Failed to remove machine with id %s, reason: ', id, err.message);
+      } else {
+
+        result.machines.push(id);
+
+        if (!options.json) {
+          console.log('Machine %s was deleted successfully...', id);
+        }
+      }
+
+      if (--count == 0) {
+        if (options.json) {
+          console.log(JSON.stringify(result));
+        }
+        process.exit(0);
+      }
+    }
+
+    list.forEach(function (machine) {
+      stopAndDeleteMachine(machine.id, onstopdelete);
+    });
+  }
+
+
+  confirmClean(onconfirm);
+}
+
+
+function log () {
+  if (options.quiet == false) {
+    process.stdout.write(format.apply(null, arguments) + '\n');
+  }
+}
+
+
+function debug () {
+  if (options.quiet == false && options.debug) {
+    process.stdout.write(format.apply(null, arguments) + '\n');
+  }
+}
+
+
+function confirmClean (C) {
+  var rl;
+  var prompt;
+
+  if (options.noconfirm) {
+    debug('ignoring confirm dialog');
+    return process.nextTick(function () {
+      return C(null, true);
+    });
+  }
+
+  rl = createInterface({
+    input       : process.stdin,
+    output      : process.stdout
+  });
+
+  function onanswer (answer) {
+    rl.close();
+    return C(null, /^(y|yes)/i.test(answer));
+  }
+
+  prompt = 'WARNING: All SmartDC machines will be deleted, continue? [y/N]';
+  rl.question(prompt, onanswer);
+}
+
+
+function stopAndDeleteMachine (id, C) {
+  var maxtries = options.tries;
+  var notries = maxtries;
+
+  function dostop () {
+    debug('Executing stop machine command "sdc-stopmachine ' + id + '"');
+    exec('sdc-stopmachine ' + id, function (err) {
+      if (err) {
+        return C(err, id);
+      }
+      dodelete();
+    });
+  }
+
+  function dodelete () {
+    debug('Executing delete machine command "sdc-deletemachine ' + id + '"');
+    exec('sdc-deletemachine ' + id, function (err) {
+      if (err) {
+        if (notries-- < 0) {
+          return C(new Error('Too many tries'), id);
+        }
+        debug('Failed to delete machine - ' + err.message);
+        debug('Retrying ' + (maxtries - notries ) + '/' + maxtries + '...');
+        return dostop();
+      }
+      return C(null, id);
+    });
+  }
+
+  dostop();
+}
+
+
+if (process.argv[1] == __filename) {
+  main();
+}
