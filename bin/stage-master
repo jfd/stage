@@ -1391,7 +1391,7 @@ function logServerError (err, time) {
   console.error("----------------- SERVER ERROR ------------------");
   console.error(err && err.stack);
   console.error("-------------------------------------------------");
-  log("Restarting server in %s sec...", (time / 1000));
+  log("Restarting server in " + (time / 1000) + " sec...");
 }
 
 
@@ -1399,7 +1399,7 @@ function logJobManagerError (err, time) {
   console.error("-------------- JOB MANAGER ERROR ----------------");
   console.error(err && err.stack);
   console.error("-------------------------------------------------");
-  log("Restarting job manager in %s sec...", (time / 1000));
+  log("Restarting job manager in " + (time / 1000)+ " sec...");
 }
 
 
