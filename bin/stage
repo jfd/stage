@@ -7,7 +7,7 @@ Most common used commands for stage:
 
   abort         Aborts a currently running test
   clients       List available clients (slaves and monitors) on master process
-  collect       Get's report for specifed test
+  collect       Get report for specified job
   extras        Shows available extras commands
   help          Shows available commands for stage (this section)
   install       Installs a test package on master process
