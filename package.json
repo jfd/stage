@@ -35,6 +35,10 @@
     "temporary": "~0.0.5",
     "forever": "~0.10.0"
   },
+	"repository": {
+		"type": "git",
+		"url": "git://github.com/hydna/node-stage.git"
+	},  
   "engines": {
     "node": ">=0.7.7"
   }
