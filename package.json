@@ -31,7 +31,7 @@
     "man/clean-smartdc.1"
   ],
   "dependencies": {
-		"ws": "~0.4.22",
+    "ws": "~0.4.22",
     "temporary": "~0.0.5",
     "forever": "~0.10.0"
   },
