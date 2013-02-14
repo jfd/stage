@@ -26,29 +26,29 @@ Built-in maintenance commands:
   setup-smartdc Installs dependencies on a SmartDC machine.
   clean-smartdc Removes all SmartDC machines.
 
-See 'stage <command> --help' for more information on a specific command.
+See `stage <command> --help` for more information on a specific command.
 */
 
-"use strict";
+'use strict';
 
 var resolve                   = require.resolve;
 
-var spawn                     = require("child_process").spawn;
+var spawn                     = require('child_process').spawn;
 
-var basename                  = require("path").basename;
-var extname                   = require("path").extname;
-var presolve                  = require("path").resolve;
-var join                      = require("path").join;
+var basename                  = require('path').basename;
+var extname                   = require('path').extname;
+var presolve                  = require('path').resolve;
+var join                      = require('path').join;
 
-var readFileSync              = require("fs").readFileSync;
-var readdirSync               = require("fs").readdirSync;
-var existsSync                = require("fs").existsSync;
+var readFileSync              = require('fs').readFileSync;
+var readdirSync               = require('fs').readdirSync;
+var existsSync                = require('fs').existsSync;
 
 
-var BUILTIN_EXTRAS            = [ resolve("./stage-setup-machine"),
-                                  resolve("./stage-setup-smartdc"),
-                                  resolve("./stage-clean-smartdc"),
-                                  resolve("./stage-init-test")
+var BUILTIN_EXTRAS            = [ resolve('./stage-setup-machine'),
+                                  resolve('./stage-setup-smartdc'),
+                                  resolve('./stage-clean-smartdc'),
+                                  resolve('./stage-init-test')
                                 ];
 
 
@@ -59,72 +59,72 @@ function main () {
 
   switch (cmd) {
 
-    case "--help":
-    case "help":
+    case '--help':
+    case 'help':
     return help();
 
-    case "-v":
-    case "--version":
+    case '-v':
+    case '--version':
     return version();
 
-    case "--usage":
+    case '--usage':
     return usage();
 
-    case "master":
-    process.argv[1] = resolve("./stage-master");
+    case 'master':
+    process.argv[1] = resolve('./stage-master');
     break;
 
-    case "slave":
-    process.argv[1] = resolve("./stage-slave");
+    case 'slave':
+    process.argv[1] = resolve('./stage-slave');
     break;
 
-    case "i":
-    case "install":
-    process.argv[1] = resolve("./stage-install");
+    case 'i':
+    case 'install':
+    process.argv[1] = resolve('./stage-install');
     break;
 
-    case "u":
-    case "uninstall":
-    process.argv[1] = resolve("./stage-uninstall");
+    case 'u':
+    case 'uninstall':
+    process.argv[1] = resolve('./stage-uninstall');
     break;
 
-    case "a":
-    case "abort":
-    process.argv[1] = resolve("./stage-abort");
+    case 'a':
+    case 'abort':
+    process.argv[1] = resolve('./stage-abort');
     break;
 
-    case "c":
-    case "clients":
-    process.argv[1] = resolve("./stage-clients");
+    case 'c':
+    case 'clients':
+    process.argv[1] = resolve('./stage-clients');
     break;
 
-    case "l":
-    case "localenv":
-    process.argv[1] = resolve("./stage-localenv");
+    case 'l':
+    case 'localenv':
+    process.argv[1] = resolve('./stage-localenv');
     break;
 
-    case "j":
-    case "jobs":
-    process.argv[1] = resolve("./stage-jobs");
+    case 'j':
+    case 'jobs':
+    process.argv[1] = resolve('./stage-jobs');
     break;
 
-    case "t":
-    case "tests":
-    process.argv[1] = resolve("./stage-tests");
+    case 't':
+    case 'tests':
+    process.argv[1] = resolve('./stage-tests');
     break;
 
-    case "r":
-    case "run":
-    process.argv[1] = resolve("./stage-run");
+    case 'r':
+    case 'run':
+    process.argv[1] = resolve('./stage-run');
     break;
 
-    case "co":
-    case "collect":
-    process.argv[1] = resolve("./stage-collect");
+    case 'co':
+    case 'collect':
+    process.argv[1] = resolve('./stage-collect');
     break;
 
-    case "e":
-    case "extras":
+    case 'e':
+    case 'extras':
     return extras();
 
     default:
@@ -136,7 +136,7 @@ function main () {
     process.argv[1] = getExtraByAlias(cmd);
 
     if (existsSync(process.argv[1]) == false) {
-      console.error("stage: bad command -- %s", basename(cmd));
+      console.error('stage: bad command -- %s', basename(cmd));
       process.exit(1);
     }
     break;
@@ -155,26 +155,26 @@ function usage () {
 
 
 function version () {
-  console.log(require("../package").version);
+  console.log(require('../package').version);
   process.exit(1);
 }
 
 
 function help () {
-  spawn("man", ["stage"], { customFds : [0, 1, 2] });
+  spawn('man', ['stage'], { customFds : [0, 1, 2] });
 }
 
 
 function extras () {
   var extras;
 
-  console.log("Usage: stage <command>");
-  console.log("Available extras commands:\n");
+  console.log('Usage: stage <command>');
+  console.log('Available extras commands:\n');
 
   extras = getAvailableExtras();
   extras.forEach(function (cmd) {
     var alias = /^stage\-(.+)/.exec(basename(cmd))[1];
-    console.log("  " + alias);
+    console.log('  ' + alias);
   });
 }
 
@@ -182,7 +182,7 @@ function extras () {
 function getExtraByAlias (alias) {
   var res;
 
-  alias = "stage-" + alias;
+  alias = 'stage-' + alias;
 
   res = getAvailableExtras().filter(function (t) {
     return basename(t) == alias;
@@ -198,8 +198,8 @@ function getAvailableExtras () {
 
   extras = BUILTIN_EXTRAS.slice(0);
 
-  if ("STAGE_EXTRAS_PATH" in process.env) {
-    dirs = process.env["STAGE_EXTRAS_PATH"].split(":");
+  if ('STAGE_EXTRAS_PATH' in process.env) {
+    dirs = process.env['STAGE_EXTRAS_PATH'].split(':');
   } else {
     return extras;
   }

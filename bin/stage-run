@@ -1,24 +1,24 @@
 #!/usr/bin/env node
 
-"use strict";
+'use strict';
 
-var runJob                    = require("../lib/api").runJob;
+var runJob                    = require('../lib/api').runJob;
 
-var version                   = require("../lib/cliutil").version;
-var usage                     = require("../lib/cliutil").usage;
-var help                      = require("../lib/cliutil").help;
-var halt                      = require("../lib/cliutil").halt;
-var url                       = require("../lib/cliutil").url;
-var toHttpUrl                 = require("../lib/cliutil").toHttpUrl;
+var version                   = require('../lib/cliutil').version;
+var usage                     = require('../lib/cliutil').usage;
+var help                      = require('../lib/cliutil').help;
+var halt                      = require('../lib/cliutil').halt;
+var url                       = require('../lib/cliutil').url;
+var toHttpUrl                 = require('../lib/cliutil').toHttpUrl;
 
-var consts                    = require("../lib/consts");
+var consts                    = require('../lib/consts');
 
 
-var DEFAULT_OPTIONS           = { "url"       : consts.DEFAULT_URL,
-                                  "json"      : false,
-                                  "name"      : null,
-                                  "clients"   : 0,
-                                  "config"    : {}
+var DEFAULT_OPTIONS           = { 'url'       : consts.DEFAULT_URL,
+                                  'json'      : false,
+                                  'name'      : null,
+                                  'clients'   : 0,
+                                  'config'    : {}
                                 };
 
 
@@ -38,7 +38,7 @@ function main () {
       if (/^--/.test(arg)) {
         options.config[arg.substr(2)] = args.shift();
       } else {
-        halt("bad config option " + arg);
+        halt('bad config option ' + arg);
       }
 
       continue;
@@ -46,40 +46,40 @@ function main () {
 
     switch (arg) {
 
-      case "-v":
-      case "--version":
+      case '-v':
+      case '--version':
       return version();
 
-      case "--usage":
-      return usage("<package>");
+      case '--usage':
+      return usage('<package>');
 
-      case "--help":
+      case '--help':
       return help();
 
-      case "--url":
-      case "--hostname":
-      case "--port":
-      case "--token":
-      case "--secure":      
+      case '--url':
+      case '--hostname':
+      case '--port':
+      case '--token':
+      case '--secure':      
       options.url = url(options.url, arg, args.shift());
       break;
 
-      case "--json":
+      case '--json':
       options.json = true;
       break;
 
-      case "--clients":
+      case '--clients':
       options.clients = parseInt(args.shift());
       break;
 
-      case "--":
+      case '--':
       parseconfig = true;
       break;
 
       default:
 
-      if (arg[0] == "-") {
-        halt("unknown option " + arg);
+      if (arg[0] == '-') {
+        halt('unknown option ' + arg);
       }
       
       options.name = arg;
@@ -90,11 +90,11 @@ function main () {
   options.url = toHttpUrl(options.url);
 
   if (!options.name || !options.name.length) {
-    halt("expected name of package");
+    halt('expected name of package');
   }
 
   if (isNaN(options.clients) || options.clients < 0) {
-    halt("clients - expected a postiive number or 0");
+    halt('clients - expected a postiive number or 0');
   }
 
   params = {
@@ -111,7 +111,7 @@ function main () {
         return console.log(JSON.stringify(job));
       }
 
-      console.log("Test '%s' started with id #%s", job.name, job.id);
+      console.log('Test "%s" started with id #%s', job.name, job.id);
   });
 }
 

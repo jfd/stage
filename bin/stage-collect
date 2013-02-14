@@ -1,22 +1,22 @@
 #!/usr/bin/env node
 
-"use strict";
+'use strict';
 
-var getReport                 = require("../lib/api").getReport;
+var getReport                 = require('../lib/api').getReport;
 
-var version                   = require("../lib/cliutil").version;
-var usage                     = require("../lib/cliutil").usage;
-var help                      = require("../lib/cliutil").help;
-var halt                      = require("../lib/cliutil").halt;
-var url                       = require("../lib/cliutil").url;
-var  toHttpUrl                = require("../lib/cliutil").toHttpUrl;
+var version                   = require('../lib/cliutil').version;
+var usage                     = require('../lib/cliutil').usage;
+var help                      = require('../lib/cliutil').help;
+var halt                      = require('../lib/cliutil').halt;
+var url                       = require('../lib/cliutil').url;
+var  toHttpUrl                = require('../lib/cliutil').toHttpUrl;
 
-var consts                    = require("../lib/consts");
+var consts                    = require('../lib/consts');
 
 
-var DEFAULT_OPTIONS           = { "url"         : consts.DEFAULT_URL,
-                                  "json"        : false,
-                                  "jobid"       : null
+var DEFAULT_OPTIONS           = { 'url'         : consts.DEFAULT_URL,
+                                  'json'        : false,
+                                  'jobid'       : null
                                 };
 
 
@@ -30,32 +30,32 @@ function main () {
   while ((arg = args.shift())) {
     switch (arg) {
 
-      case "-v":
-      case "--version":
+      case '-v':
+      case '--version':
       return version();
 
-      case "--usage":
-      return usage("<jobid>");
+      case '--usage':
+      return usage('<jobid>');
 
-      case "--help":
+      case '--help':
       return help();
 
-      case "--url":
-      case "--hostname":
-      case "--port":
-      case "--token":
-      case "--secure":
+      case '--url':
+      case '--hostname':
+      case '--port':
+      case '--token':
+      case '--secure':
       options.url = url(options.url, arg, args.shift());
       break;
 
-      case "--json":
+      case '--json':
       options.json = true;
       break;
 
       default:
 
-      if (arg[0] == "-") {
-        halt("unknown option " + arg);
+      if (arg[0] == '-') {
+        halt('unknown option ' + arg);
       }
 
       options.jobid = parseInt(arg, 10);
@@ -66,7 +66,7 @@ function main () {
   options.url = toHttpUrl(options.url);
 
   if (!options.jobid || isNaN(options.jobid)) {
-    halt("expected <jobid>");
+    halt('expected <jobid>');
   }
 
   getReport(options.url, options.jobid, function (err, report) {
@@ -79,10 +79,10 @@ function main () {
     }
 
     console.log(report);
-    // console.log("total %s", list.length);
+    // console.log('total %s', list.length);
     // 
     // list.forEach(function (job) {
-    //   console.log("#%s %s %s", job.id, job.name, job.state);
+    //   console.log('#%s %s %s', job.id, job.name, job.state);
     // });
   });
 }

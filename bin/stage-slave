@@ -1,41 +1,41 @@
 #!/usr/bin/env node
 
-"use strict";
+'use strict';
 
-var exec                      = require("child_process").exec;
-var spawn                     = require("child_process").spawn;
+var exec                      = require('child_process').exec;
+var spawn                     = require('child_process').spawn;
 
-var statSync                  = require("fs").statSync;
-var readdirSync               = require("fs").readdirSync;
-var rmdirSync                 = require("fs").rmdirSync;
-var existsSync                = require("fs").existsSync;
-var unlinkSync                = require("fs").unlinkSync;
+var statSync                  = require('fs').statSync;
+var readdirSync               = require('fs').readdirSync;
+var rmdirSync                 = require('fs').rmdirSync;
+var existsSync                = require('fs').existsSync;
+var unlinkSync                = require('fs').unlinkSync;
 
-var arch                      = require("os").arch;
-var platform                  = require("os").platform;
-var cpus                      = require("os").cpus;
+var arch                      = require('os').arch;
+var platform                  = require('os').platform;
+var cpus                      = require('os').cpus;
 
-var basename                  = require("path").basename;
-var dirname                   = require("path").dirname;
-var join                      = require("path").join;
-var resolve                   = require("path").resolve;
+var basename                  = require('path').basename;
+var dirname                   = require('path').dirname;
+var join                      = require('path').join;
+var resolve                   = require('path').resolve;
 
-var parseUrl                  = require("url").parse;
-var formatUrl                 = require("url").format;
+var parseUrl                  = require('url').parse;
+var formatUrl                 = require('url').format;
 
-var inherits                  = require("util").inherits;
-var log                       = require("util").log;
+var inherits                  = require('util').inherits;
+var log                       = require('util').log;
 
-var WebSocket                 = require("ws");
+var WebSocket                 = require('ws');
 
-var version                   = require("../lib/cliutil").version;
-var usage                     = require("../lib/cliutil").usage;
-var help                      = require("../lib/cliutil").help;
-var halt                      = require("../lib/cliutil").halt;
-var url                       = require("../lib/cliutil").url;
-var toWsUrl                   = require("../lib/cliutil").toWsUrl;
+var version                   = require('../lib/cliutil').version;
+var usage                     = require('../lib/cliutil').usage;
+var help                      = require('../lib/cliutil').help;
+var halt                      = require('../lib/cliutil').halt;
+var url                       = require('../lib/cliutil').url;
+var toWsUrl                   = require('../lib/cliutil').toWsUrl;
 
-var consts                    = require("../lib/consts");
+var consts                    = require('../lib/consts');
 
 var JOBSTATE_NA               = consts.JOBSTATE_NA;
 var JOBSTATE_QUEUED           = consts.JOBSTATE_QUEUED;
@@ -72,13 +72,13 @@ var LOGHANDLER                = (function $(l,h){h.l=l;});
 
 var CONN_RECONNECTINTERVAL    = 2000;
 
-var VALID_SIGNALS             =  ["SIGUSR1", "SIGUSR2"];
+var VALID_SIGNALS             =  ['SIGUSR1', 'SIGUSR2'];
 
-var DEFAULT_OPTIONS           = { "url"         : consts.DEFAULT_URL,
-                                  "loglevel"    : consts.DEFAULT_LOGLEVEL,
-                                  "cachepath"   : resolve("cache"),
-                                  "signal"      : "SIGUSR2",
-                                  "forkmode"    : false
+var DEFAULT_OPTIONS           = { 'url'         : consts.DEFAULT_URL,
+                                  'loglevel'    : consts.DEFAULT_LOGLEVEL,
+                                  'cachepath'   : resolve('cache'),
+                                  'signal'      : 'SIGUSR2',
+                                  'forkmode'    : false
                                 };
 
 var options                   = Object.create(DEFAULT_OPTIONS);
@@ -114,64 +114,64 @@ function main () {
   while ((arg = args.shift())) {
     switch (arg) {
 
-      case "-v":
-      case "--version":
+      case '-v':
+      case '--version':
       return version();
 
-      case "--usage":
+      case '--usage':
       return usage();
 
-      case "--help":
+      case '--help':
       return help();
 
-      case "--url":
-      case "--hostname":
-      case "--port":
-      case "--token":
-      case "--secure":      
+      case '--url':
+      case '--hostname':
+      case '--port':
+      case '--token':
+      case '--secure':      
       options.url = url(options.url, arg, args.shift());
       break;
 
-      case "--cachepath":
+      case '--cachepath':
       options.cachepath = resolve(args.shift());
       break;
 
-      case "--signal":
-      options.signal = (args.shift() || "").toUpperCase();
+      case '--signal':
+      options.signal = (args.shift() || '').toUpperCase();
       break;
 
-      case "--loglevel":
+      case '--loglevel':
       options.loglevel = LOG_LEVELS.indexOf(args.shift());
       break;
 
-      case "--forkmode":
+      case '--forkmode':
       options.forkmode = true;
       break;
 
       default:
-      return halt("bad argument - " + arg);
+      return halt('bad argument - ' + arg);
     }
   }
 
   if (options.forkmode && typeof process.send !== 'function') {
-    halt("started in fork-mode, but process is missing comm-channel");
+    halt('started in fork-mode, but process is missing comm-channel');
   } 
 
   options.url = toWsUrl(options.url);
 
   if (existsSync(options.cachepath) == false ||
       statSync(options.cachepath).isDirectory() == false) {
-    halt("option cache-path must be a directory");
+    halt('option cache-path must be a directory');
   }
 
   if (isNaN(options.loglevel) ||
       options.loglevel < 0 ||
       options.loglevel > 5) {
-    halt("invalid log level");
+    halt('invalid log level');
   }
 
   if (VALID_SIGNALS.indexOf(options.signal) == -1) {
-    halt("invalid signal -- " + options.signal);
+    halt('invalid signal -- ' + options.signal);
   }
 
   notif(logDebugInfo);
@@ -195,9 +195,9 @@ function rmdirall (root) {
     try {
       unlinkSync(path);
     } catch (err) {
-      if (err.code === "ENOENT")
+      if (err.code === 'ENOENT')
         return;
-      if (err.code !== "EPERM" && err.code !== "EISDIR")
+      if (err.code !== 'EPERM' && err.code !== 'EISDIR')
         throw err;
       readdirSync(path).forEach(function (filepath) {
         rm(join(path, filepath));
@@ -236,21 +236,21 @@ function runConnection () {
   url = parseUrl(options.url, true);
 
   url.search = null;
-  url.query.role = "slave";
+  url.query.role = 'slave';
   url.query.platform = platform();
   url.query.arch = arch();
   url.query.cpus = cpus().length;
-  url.query.engineName = "node";
+  url.query.engineName = 'node';
   url.query.engineVersion = process.version;
 
   url = formatUrl(url);
 
   conn = new WebSocket(url);
 
-  conn.on("open", onopen);
-  conn.on("message", onmessage);
-  conn.on("error", onerror);
-  conn.on("close", onclose);
+  conn.on('open', onopen);
+  conn.on('message', onmessage);
+  conn.on('error', onerror);
+  conn.on('close', onclose);
 
   conn.reconnect = function () {
     notif(logReconnect, CONN_RECONNECTINTERVAL);
@@ -272,14 +272,14 @@ function onmessage (msg) {
   var op;
 
   if (!(op = msg[0]) || !(handler = MSGH[op])) {
-    this.emit("error", Error("Bad command 0x" + op.toString(16)));
+    this.emit('error', Error('Bad command 0x' + op.toString(16)));
     return;
   }
 
   try {
     handler.call(this, msg);
   } catch (err) {
-    this.emit("error", err);
+    this.emit('error', err);
   }
 }
 
@@ -288,10 +288,10 @@ function onerror (err) {
 
   // Do not trigger ERROR if we are trying to connect and
   // host is down.
-  if (err.code != "ECONNREFUSED") {
+  if (err.code != 'ECONNREFUSED') {
     notif(logError, err);
     if (this.readyState !== 4) {
-      this.removeAllListeners("close");
+      this.removeAllListeners('close');
       this.close(1000);
     }
   }
@@ -307,7 +307,7 @@ function onerror (err) {
 
 
 function onclose (code, msg) {
-  var reason = msg && msg.toString() || "UNKNOWN_REASON";
+  var reason = msg && msg.toString() || 'UNKNOWN_REASON';
 
   if (code == 1002) {
     console.error(reason);
@@ -337,7 +337,7 @@ function handleInstall (msg) {
   pkg = msg.slice(5);
 
   if (TestJob.get(id)) {
-    throw new Error("Test already in use");
+    throw new Error('Test already in use');
   }
 
   job = new TestJob(id, this);
@@ -352,7 +352,7 @@ function handleSetup (msg) {
   var id;
 
   id = msg.readUInt32BE(1);
-  ctx = JSON.parse(msg.toString("utf8", 5));
+  ctx = JSON.parse(msg.toString('utf8', 5));
 
   if ((job = TestJob.get(id))) {
     job.setup(ctx);
@@ -378,7 +378,7 @@ function handleAbort (msg) {
   // var reason;
 
   id = msg.readUInt32BE(1);
-  reason = msg.toString("utf8", 5);
+  reason = msg.toString('utf8', 5);
 
   if ((job = TestJob.get(id))) {
     job.abort(reason);
@@ -457,11 +457,11 @@ TestJob.prototype.onchildexit = function (err, stdout, stderr) {
   switch (this.state) {
     
     default:
-    this.destroy(Error("Invalid job state"));
+    this.destroy(Error('Invalid job state'));
     break;
 
     case JOBSTATE_SETUP:
-    this.destroy(Error("Died under setup phase"));
+    this.destroy(Error('Died under setup phase'));
     break;
 
     case JOBSTATE_RUNNING:
@@ -485,23 +485,23 @@ TestJob.prototype.onpackageinfo = function (pkg, info) {
   scripts = info.scripts || {};
 
   if (!info.name || !info.version) {
-    return this.destroy(new Error("Missing name and/or version in package"));
+    return this.destroy(new Error('Missing name and/or version in package'));
   }
 
-  this.name = info.name + "@" + info.version;
+  this.name = info.name + '@' + info.version;
   this.path = resolve(options.cachepath, this.name);
 
-  this.isStageTest = "stagetest" in scripts;
-  this.isNpmTest = "test" in scripts;
+  this.isStageTest = 'stagetest' in scripts;
+  this.isNpmTest = 'test' in scripts;
 
   this.packageConfig = info.config || {};
 
   if (!this.isStageTest && !this.isNpmTest) {
-    return this.destroy(new Error("Missing a test to run"));
+    return this.destroy(new Error('Missing a test to run'));
   }
 
   this.execPath = this.isStageTest ? scripts.stagetest
-                                 : "npm test";
+                                 : 'npm test';
 
 
   notif(logPrepareInstall, this.path);
@@ -523,8 +523,8 @@ TestJob.prototype.spawnChild = function () {
 
   opts = {
     cwd       : this.path,
-    env       : { "STAGE_PARENT_PID"    : process.pid,
-                  "STAGE_PARENT_SIGNAL" : options.signal
+    env       : { 'STAGE_PARENT_PID'    : process.pid,
+                  'STAGE_PARENT_SIGNAL' : options.signal
                 }
   };
 
@@ -533,19 +533,19 @@ TestJob.prototype.spawnChild = function () {
   }
 
   // NPM provides the npm_config from package
-  // when running "npm test", so we need to
+  // when running 'npm test', so we need to
   // provide does manually when running as a
   // NDT test.
   if (this.isStageTest) {
     for (var k in pconfig) {
-      opts.env["npm_package_config_" + k] = pconfig[k];
+      opts.env['npm_package_config_' + k] = pconfig[k];
     }
   }
 
   // User provided config parameters overrides the one
   // defined in the package.json file.
   for (var k in uconfig) {
-    opts.env["npm_package_config_" + k] = uconfig[k];
+    opts.env['npm_package_config_' + k] = uconfig[k];
   }
   
 
@@ -567,7 +567,7 @@ TestJob.prototype.lock = function (C) {
   var owner;
 
   if (this.isLocked()) {
-    return self.destroy(new Error("Already locked"));
+    return self.destroy(new Error('Already locked'));
   }
 
   if ((owner = TestJob.getLockOwner(this.path))) {
@@ -603,7 +603,7 @@ TestJob.prototype.unlock = function () {
 
 TestJob.prototype.install = function (pkg) {
   var task;
-  task = this.exec("tar -xO ./package.json", function (stdout) {
+  task = this.exec('tar -xO ./package.json', function (stdout) {
     this.onpackageinfo(pkg, JSON.parse(stdout));
   });
   task.stdin.end(pkg);
@@ -623,9 +623,9 @@ TestJob.prototype.unpack = function (pkg) {
 
   notif(logUnpacking, this.path);
 
-  this.exec("mkdir -p " + this.path, function () {
+  this.exec('mkdir -p ' + this.path, function () {
     var task;
-    task = this.exec("tar x -C" + this.path, function () {
+    task = this.exec('tar x -C' + this.path, function () {
       this.npmInstall();
     });
     task.stdin.end(pkg);
@@ -638,7 +638,7 @@ TestJob.prototype.npmInstall = function () {
 
   notif(logInstalling, this.path);
 
-  cmd = "cd " + this.path + " && npm install --dev && cd " + process.cwd();
+  cmd = 'cd ' + this.path + ' && npm install --dev && cd ' + process.cwd();
 
   this.exec(cmd, function (stdout) {
     this.state = JOBSTATE_INSTALLED;
@@ -739,12 +739,12 @@ TestJob.prototype.destroy = function (err) {
   var id;
 
   if (this.child) {
-    this.child.kill("SIGKILL");
+    this.child.kill('SIGKILL');
     this.child = null;
   }
 
   if (this.task) {
-    this.task.kill("SIGKILL");
+    this.task.kill('SIGKILL');
     this.task = null;
   }
 
@@ -753,7 +753,7 @@ TestJob.prototype.destroy = function (err) {
   }
 
   if (err) {
-    reason = new Buffer((err && err.message) || "UNKNOWN_ERROR");
+    reason = new Buffer((err && err.message) || 'UNKNOWN_ERROR');
     notif(logTestError, this, err);
 
     if (this.client) {
@@ -792,85 +792,85 @@ function sendTo (client, op, id, data) {
 
 
 function logError (err) {
-  console.error("------------------- APP ERROR -------------------");
+  console.error('------------------- APP ERROR -------------------');
   console.error(err && err.stack);
-  console.error("-------------------------------------------------");  
+  console.error('-------------------------------------------------');  
 }
 
 
 function logDebugInfo () {
-  log("WARNING: Slave is running in debug-mode");
+  log('WARNING: Slave is running in debug-mode');
 }
 
 
 function logConnect (url) {
-  log("Connection established with " + parseUrl(url).hostname);
+  log('Connection established with ' + parseUrl(url).hostname);
 }
 
 
 function logReconnect (time) {
-  log("Trying to reconnect in " + (time / 1000) + " sec...");
+  log('Trying to reconnect in ' + (time / 1000) + ' sec...');
 }
 
 
 function logClearCache (path) {
-  log("Clearing cache entry " + path);
+  log('Clearing cache entry ' + path);
 }
 
 
 function logPrepareInstall (path) {
-  log("Installing package " + basename(path));
+  log('Installing package ' + basename(path));
 }
 
 
 function logAlreadyInstalled (job) {
   var path = job.path;
-  log("Package " + basename(path) + " is already cached, ignoring..");
+  log('Package ' + basename(path) + ' is already cached, ignoring..');
 }
 
 
 function logUnpacking (path) {
-  log("Unpacking package " + basename(path) + " to " + dirname(path));
+  log('Unpacking package ' + basename(path) + ' to ' + dirname(path));
 }
 
 
 function logInstalling (path) {
-  log("Running 'npm install' on package " + basename(path));
+  log('Running `npm install` on package ' + basename(path));
 }
 
 
 function logInstallSuccess (job) {
   var path = job.path;
-  log("Package " + basename(path) + " was successfully installed");
+  log('Package ' + basename(path) + ' was successfully installed');
 }
 
 
 function logInstallFailure (err, path) {
-  path = path || "UNKNOWN_PATH";
-  log("Failed to install package " + path + " reason: " + err.message);
+  path = path || 'UNKNOWN_PATH';
+  log('Failed to install package ' + path + ' reason: ' + err.message);
 }
 
 
 function logTestResult (job, report) {
-  var er = report.haderror ? "with errors." : "without errors.";
-  log("Test #" + job.id + "(" + job.name + ") is complete, " + er);
+  var er = report.haderror ? 'with errors.' : 'without errors.';
+  log('Test #' + job.id + '(' + job.name + ') is complete, ' + er);
 }
 
 
 function logTestError (job, err) {
-  var reason = (err && err.message) || "UNKNOWN_REASON";
-  log("Test #" + job.id + " failed to complete, reason:" + reason);
+  var reason = (err && err.message) || 'UNKNOWN_REASON';
+  log('Test #' + job.id + ' failed to complete, reason:' + reason);
   console.error(err.stack);
 }
 
 
 function logTestSetup (job) {
-  log("Test #" + job.id + "(" + job.name + ") is initializing...");
+  log('Test #' + job.id + '(' + job.name + ') is initializing...');
 }
 
 
 function logTestRun (job) {
-  log("Test #" + job.id + "(" + job.name + ") is now running...");
+  log('Test #' + job.id + '(' + job.name + ') is now running...');
 }
 
 

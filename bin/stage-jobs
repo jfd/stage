@@ -1,22 +1,22 @@
 #!/usr/bin/env node
 
-"use strict";
+'use strict';
 
-var listJobs                  = require("../lib/api").listJobs;
+var listJobs                  = require('../lib/api').listJobs;
 
-var version                   = require("../lib/cliutil").version;
-var usage                     = require("../lib/cliutil").usage;
-var help                      = require("../lib/cliutil").help;
-var halt                      = require("../lib/cliutil").halt;
-var url                       = require("../lib/cliutil").url;
-var toHttpUrl                 = require("../lib/cliutil").toHttpUrl;
+var version                   = require('../lib/cliutil').version;
+var usage                     = require('../lib/cliutil').usage;
+var help                      = require('../lib/cliutil').help;
+var halt                      = require('../lib/cliutil').halt;
+var url                       = require('../lib/cliutil').url;
+var toHttpUrl                 = require('../lib/cliutil').toHttpUrl;
 
-var consts                    = require("../lib/consts");
+var consts                    = require('../lib/consts');
 
 
-var DEFAULT_OPTIONS           = { "url"         : consts.DEFAULT_URL,
-                                  "json"        : false,
-                                  "monitor"     : false
+var DEFAULT_OPTIONS           = { 'url'         : consts.DEFAULT_URL,
+                                  'json'        : false,
+                                  'monitor'     : false
                                 };
 
 
@@ -30,34 +30,34 @@ function main () {
   while ((arg = args.shift())) {
     switch (arg) {
 
-      case "-v":
-      case "--version":
+      case '-v':
+      case '--version':
       return version();
 
-      case "--usage":
+      case '--usage':
       return usage();
 
-      case "--help":
+      case '--help':
       return help();
 
-      case "--url":
-      case "--hostname":
-      case "--port":
-      case "--token":
-      case "--secure":
+      case '--url':
+      case '--hostname':
+      case '--port':
+      case '--token':
+      case '--secure':
       options.url = url(options.url, arg, args.shift());
       break;
 
-      case "--monitor":
+      case '--monitor':
       options.monitor = true;
       break;
 
-      case "--json":
+      case '--json':
       options.json = true;
       break;
 
       default:
-      return halt("bad argument - " + arg);
+      return halt('bad argument - ' + arg);
     }
   }
 
@@ -73,14 +73,14 @@ function main () {
     }
 
     if (list.length == 0) {
-      console.log("No jobs are currently running");
+      console.log('No jobs are currently running');
       return;
     }
 
-    console.log("total %s", list.length);
+    console.log('total %s', list.length);
 
     list.forEach(function (job) {
-      console.log("#%s %s %s", job.id, job.name, job.state);
+      console.log('#%s %s %s', job.id, job.name, job.state);
     });
   });
 }

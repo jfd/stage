@@ -1,52 +1,52 @@
 #!/usr/bin/env node
 
-"use strict";
+'use strict';
 
-var ok                        = require("assert").ok;
-var equal                     = require("assert").equal;
-var notEqual                  = require("assert").notEqual;
+var ok                        = require('assert').ok;
+var equal                     = require('assert').equal;
+var notEqual                  = require('assert').notEqual;
 
-var exec                      = require("child_process").exec;
-var spawn                     = require("child_process").spawn;
+var exec                      = require('child_process').exec;
+var spawn                     = require('child_process').spawn;
 
-var createDomain              = require("domain").create;
+var createDomain              = require('domain').create;
 
-var EventEmitter              = require("events").EventEmitter;
+var EventEmitter              = require('events').EventEmitter;
 
-var statSync                  = require("fs").statSync;
-var stat                      = require("fs").stat;
-var readdir                   = require("fs").readdir;
-var readFile                  = require("fs").readFile;
-var readFileSync              = require("fs").readFileSync;
-var writeFile                 = require("fs").writeFile;
-var exists                    = require("fs").exists;
-var existsSync                = require("fs").existsSync;
-var unlink                    = require("fs").unlink;
+var statSync                  = require('fs').statSync;
+var stat                      = require('fs').stat;
+var readdir                   = require('fs').readdir;
+var readFile                  = require('fs').readFile;
+var readFileSync              = require('fs').readFileSync;
+var writeFile                 = require('fs').writeFile;
+var exists                    = require('fs').exists;
+var existsSync                = require('fs').existsSync;
+var unlink                    = require('fs').unlink;
 
-var createServer              = require("http").createServer;
-var createSecureServer        = require("https").createServer;
+var createServer              = require('http').createServer;
+var createSecureServer        = require('https').createServer;
 
-var basename                  = require("path").basename;
-var extname                   = require("path").extname;
-var join                      = require("path").join;
-var resolve                   = require("path").resolve;
+var basename                  = require('path').basename;
+var extname                   = require('path').extname;
+var join                      = require('path').join;
+var resolve                   = require('path').resolve;
 
-var parseUrl                  = require("url").parse;
+var parseUrl                  = require('url').parse;
 
-var inherits                  = require("util").inherits;
-var format                    = require("util").format;
-var log                       = require("util").log;
+var inherits                  = require('util').inherits;
+var format                    = require('util').format;
+var log                       = require('util').log;
 
-var WebSocket                 = require("ws");
-var WebSocketServer           = require("ws").Server;
+var WebSocket                 = require('ws');
+var WebSocketServer           = require('ws').Server;
 
-var version                   = require("../lib/cliutil").version;
-var usage                     = require("../lib/cliutil").usage;
-var help                      = require("../lib/cliutil").help;
-var halt                      = require("../lib/cliutil").halt;
-var url                       = require("../lib/cliutil").url;
+var version                   = require('../lib/cliutil').version;
+var usage                     = require('../lib/cliutil').usage;
+var help                      = require('../lib/cliutil').help;
+var halt                      = require('../lib/cliutil').halt;
+var url                       = require('../lib/cliutil').url;
 
-var consts                    = require("../lib/consts");
+var consts                    = require('../lib/consts');
 
 var JOBSTATE_NA               = consts.JOBSTATE_NA;
 var JOBSTATE_QUEUED           = consts.JOBSTATE_QUEUED;
@@ -93,24 +93,24 @@ var MANANGER_ERRORINTERVAL    = 1000;
 
 var SERVER_ERRORINTERVAL      = 1000;
 
-var DASHBOARD_BASE            = resolve(__dirname, "../lib/dashboard");
+var DASHBOARD_BASE            = resolve(__dirname, '../lib/dashboard');
 
-var CONTENT_TYPES             = { ".html"       : "text/html",
-                                  ".js"         : "application/javascript",
-                                  ".css"        : "text/css"
+var CONTENT_TYPES             = { '.html'       : 'text/html',
+                                  '.js'         : 'application/javascript',
+                                  '.css'        : 'text/css'
                                 };
 
-var DEFAULT_OPTIONS           = { "host"        : null,
-                                  "token"       : null,
-                                  "port"        : 8080,
-                                  "forkmode"    : false,
-                                  "maxjobs"     : 5,
-                                  "loglevel"    : consts.DEFAULT_LOGLEVEL,
-                                  "cachepath"   : resolve("cache"),
-                                  "secure"      : false,
-                                  "key"         : "",
-                                  "cert"        : "",
-                                  "lifetime"    : 1440
+var DEFAULT_OPTIONS           = { 'host'        : null,
+                                  'token'       : null,
+                                  'port'        : 8080,
+                                  'forkmode'    : false,
+                                  'maxjobs'     : 5,
+                                  'loglevel'    : consts.DEFAULT_LOGLEVEL,
+                                  'cachepath'   : resolve('cache'),
+                                  'secure'      : false,
+                                  'key'         : '',
+                                  'cert'        : '',
+                                  'lifetime'    : 1440
                                 };
 
 
@@ -119,26 +119,26 @@ var serverDomain              = null;
 var managerDomain             = null;
 
 
-MSGH(COP_INSTALL,               Job,        "handleInstall",   "slave");
-MSGH(COP_SETUP,                 Job,        "handleSetup",     "slave");
-MSGH(COP_RESULT,                Job,        "handleResult",    "slave");
-MSGH(COP_TESTERROR,             Job,        "handleTestError", "slave");
+MSGH(COP_INSTALL,               Job,        'handleInstall',   'slave');
+MSGH(COP_SETUP,                 Job,        'handleSetup',     'slave');
+MSGH(COP_RESULT,                Job,        'handleResult',    'slave');
+MSGH(COP_TESTERROR,             Job,        'handleTestError', 'slave');
 
 
-ROUTE("/info/$",                "GET",      handleInfo);
-ROUTE("/tests/$",               "POST",     handleInstallTest);
-ROUTE("/tests/$",               "GET",      handleListTests);
-ROUTE("/tests/(.*)/$",          "DELETE",   handleUninstallTest);
-ROUTE("/tests/(.*)/$",          "GET",      handleListTests);
-ROUTE("/jobs/(.*)/$",           "POST",     handleRunTest);
-ROUTE("/jobs/$",                "GET",      handleListJobs);
-ROUTE("/jobs/(.*)$",            "GET",      handleGetReport);
-ROUTE("/jobs/(.*)/$",           "DELETE",   handleAbortJob);
-ROUTE("/clients/$",             "GET",      handleListClients);
-ROUTE("/clients/(slaves)/$",    "GET",      handleListClients);
-ROUTE("/$",                     "GET",      handleStatic);
-ROUTE("/(favicon.ico)$",        "GET",      handleStatic);
-ROUTE("/static/(.*)$",          "GET",      handleStatic);
+ROUTE('/info/$',                'GET',      handleInfo);
+ROUTE('/tests/$',               'POST',     handleInstallTest);
+ROUTE('/tests/$',               'GET',      handleListTests);
+ROUTE('/tests/(.*)/$',          'DELETE',   handleUninstallTest);
+ROUTE('/tests/(.*)/$',          'GET',      handleListTests);
+ROUTE('/jobs/(.*)/$',           'POST',     handleRunTest);
+ROUTE('/jobs/$',                'GET',      handleListJobs);
+ROUTE('/jobs/(.*)$',            'GET',      handleGetReport);
+ROUTE('/jobs/(.*)/$',           'DELETE',   handleAbortJob);
+ROUTE('/clients/$',             'GET',      handleListClients);
+ROUTE('/clients/(slaves)/$',    'GET',      handleListClients);
+ROUTE('/$',                     'GET',      handleStatic);
+ROUTE('/(favicon.ico)$',        'GET',      handleStatic);
+ROUTE('/static/(.*)$',          'GET',      handleStatic);
 
 
 LOGHANDLER(LOG_FATAL,           logServerError);
@@ -162,95 +162,95 @@ function main () {
   while ((arg = args.shift())) {
     switch (arg) {
 
-      case "-v":
-      case "--version":
+      case '-v':
+      case '--version':
       return version();
 
-      case "--usage":
-      return usage("<host>");
+      case '--usage':
+      return usage('<host>');
 
-      case "--help":
+      case '--help':
       return help();
 
-      case "-p":
-      case "--port":
+      case '-p':
+      case '--port':
       options.port = parseInt(args.shift());
       break;
 
-      case "--host":
+      case '--host':
       options.host = args.shift();
       break;
 
-      case "--token":
+      case '--token':
       options.token = args.shift();
       break;
 
-      case "--cachepath":
+      case '--cachepath':
       options.cachepath = resolve(args.shift());
       break;
 
-      case "--loglevel":
+      case '--loglevel':
       options.loglevel = LOG_LEVELS.indexOf(args.shift());
       break;
 
-      case "--maxjobs":
+      case '--maxjobs':
       options.maxjobs = parseInt(args.shift());
       break;
 
-      case "--secure":
+      case '--secure':
       options.secure = true;
       break;
 
-      case "--key":
+      case '--key':
       options.key = resolve(args.shift());
       break;
 
-      case "--cert":
+      case '--cert':
       options.cert = resolve(args.shift());
       break;
 
-      case "--joblifetime":
+      case '--joblifetime':
       options.lifetime = parseInt(args.shift());
       break;
 
-      case "--forkmode":
+      case '--forkmode':
       options.forkmode = true;
       break;
 
       default:
-      return halt("bad argument - " + arg);
+      return halt('bad argument - ' + arg);
     }
   }
 
   if (options.forkmode && typeof process.send !== 'function') {
-    halt("started in fork-mode, but process is missing comm-channel");
+    halt('started in fork-mode, but process is missing comm-channel');
   } 
 
   if (options.secure && existsSync(options.key) == false) {
-    halt("specified key does not exists");
+    halt('specified key does not exists');
   }
 
   if (options.secure && existsSync(options.cert) == false) {
-    halt("specified cert does not exists");
+    halt('specified cert does not exists');
   }
 
   if (isNaN(options.loglevel) ||
       options.loglevel < 0 ||
       options.loglevel > 5) {
-    halt("invalid log level");
+    halt('invalid log level');
   }
 
   if (isNaN(options.lifetime) || options.lifetime < 0) {
-    halt("invalid joblifetime");
+    halt('invalid joblifetime');
   }
 
   if (existsSync(options.cachepath) == false ||
       statSync(options.cachepath).isDirectory() == false) {
-    halt("option cache-path must be a directory");
+    halt('option cache-path must be a directory');
   }
 
   if (isNaN(options.maxjobs) || options.maxjobs < 0) {
-    halt("max-jobs must be a positive number");
+    halt('max-jobs must be a positive number');
   }
 
   notif(logDebugInfo);
@@ -277,10 +277,10 @@ function runServer () {
 
   serverDomain = createDomain();
 
-  serverDomain.on("error", function (err) {
+  serverDomain.on('error', function (err) {
 
     this.members.forEach(function (member) {
-      if ("close" in member == false) return;
+      if ('close' in member == false) return;
       try { member.close(); } catch (err) {};
     });
 
@@ -297,10 +297,10 @@ function runServer () {
   } else {
     http = createServer();
   }
-  http.on("request", onrequest);
+  http.on('request', onrequest);
 
   ws = new WebSocketServer({ server: http });
-  ws.on("connection", onclientconnect);
+  ws.on('connection', onclientconnect);
 
   serverDomain.add(http);
   serverDomain.add(ws);
@@ -311,11 +311,11 @@ function runServer () {
     http.listen();
   }
 
-  http.on("error", function (err) {
+  http.on('error', function (err) {
     console.log(err.message);
   });
 
-  http.on("listening", function () {    
+  http.on('listening', function () {    
     notif(logServerListen, http.address().port, http.address().address);
     if (options.forkmode) {
       process.send({ address: http.address() });
@@ -333,7 +333,7 @@ function runJobManager () {
 
   managerDomain = createDomain();
 
-  managerDomain.on("error", function (err) {
+  managerDomain.on('error', function (err) {
     notif(logJobManagerError, err, MANANGER_ERRORINTERVAL);
     setTimeout(runJobManager, MANANGER_ERRORINTERVAL);
   });
@@ -389,20 +389,20 @@ function onrequest (req, res) {
   reqd.add(req);
   reqd.add(res);
 
-  reqd.on("error", function (err) {
+  reqd.on('error', function (err) {
     notif(logRequestError, err, url);
     try {
-      if (err.name == "AssertionError") {
+      if (err.name == 'AssertionError') {
         res.writeHead(400);
       } else {
         res.writeHead(err.code || 500);
       }
-      res.end(err.message || "Unknown error");
-      res.on("close", function() {
+      res.end(err.message || 'Unknown error');
+      res.on('close', function() {
         reqd.dispose();
       });
     } catch (er) {
-      console.error("Error sending 500", err, req.url);
+      console.error('Error sending 500', err, req.url);
       reqd.dispose();
     }
   });
@@ -427,11 +427,11 @@ function onrequest (req, res) {
         }
 
         if (options.token) {
-          auth = "Basic " + Buffer(":" + options.token).toString("base64");
+          auth = 'Basic ' + Buffer(':' + options.token).toString('base64');
           if (options.token !== url.query.token &&
               req.headers.authorization !== auth) {
-            res.setHeader("WWW-Authenticate", "Basic realm=\"stage\"");
-            res.writeHead(401, "Not Authorized");
+            res.setHeader('WWW-Authenticate', 'Basic realm=\'stage\'');
+            res.writeHead(401, 'Not Authorized');
             res.end();
             return;
           }
@@ -442,9 +442,9 @@ function onrequest (req, res) {
     }
 
     if (badmethod) {
-      HTTPERROR(405, "method not allowed");
+      HTTPERROR(405, 'method not allowed');
     } else {
-      HTTPERROR(404, "not found");
+      HTTPERROR(404, 'not found');
     }
   });
 }
@@ -456,9 +456,9 @@ function onclientconnect (sock) {
   domain = createDomain();
   domain.add(sock);
 
-  domain.on("error", onclientdomainerror);
+  domain.on('error', onclientdomainerror);
 
-  sock.on("close", onclientclose);
+  sock.on('close', onclientclose);
   sock.destroy = sockDestroyImpl;
 
   domain.run(function () {
@@ -470,12 +470,12 @@ function onclientconnect (sock) {
     url = parseUrl(req.url, true);
 
     if (options.token) {
-      equal(options.token, url.query.token, "bad handshake token");
+      equal(options.token, url.query.token, 'bad handshake token');
     }
 
-    equal(/slave/.test(url.query.role), true, "Invalid role for connection");
+    equal(/slave/.test(url.query.role), true, 'Invalid role for connection');
 
-    sock.on("message", onclientmessage);
+    sock.on('message', onclientmessage);
     sock._validMasterClient = true;
 
     sock.instance = new TestClient(sock, url.query);
@@ -502,7 +502,7 @@ function onclientclose (sock) {
 
   sock = this instanceof WebSocket ? this : sock;
 
-  err = sock.domainError || Error("Closed by remote part");
+  err = sock.domainError || Error('Closed by remote part');
 
   if (sock.instance) {
     notif(logClientDisconnect, sock.instance, err.message);
@@ -527,18 +527,18 @@ function onclientmessage (msg) {
   var fn;
 
   if (!(op = msg[0]) || !(handler = MSGH[op])) {
-    throw new Error("Bad command 0x" + op.toString(16));
+    throw new Error('Bad command 0x' + op.toString(16));
   }
 
   if (!(instance = this.instance)) {
-    throw new Error("Invalid connection");
+    throw new Error('Invalid connection');
   }
 
   idx = (handlers = instance.handlers) && handlers.length || 0;
 
   while (idx--) {
     if ((target = handlers[idx]) instanceof handler.t &&
-        (typeof (fn = target[handler.h])) == "function" &&
+        (typeof (fn = target[handler.h])) == 'function' &&
         (this.instance.role) == handler.r &&
         (fn.call(target, instance, msg))) {
       return;
@@ -551,7 +551,7 @@ function onclientmessage (msg) {
 
 function sockDestroyImpl () {
   var err = this.domainError;
-  var reason = err ? err.message : "";
+  var reason = err ? err.message : '';
 
   if (this.readyState == WebSocket.OPEN) {
     try {
@@ -565,7 +565,7 @@ function sockDestroyImpl () {
     this.instance = null;
   }
 
-  if ("_validMasterClient" in this == false) {
+  if ('_validMasterClient' in this == false) {
     notif(logClientReject, this, reason);
   }
 }
@@ -575,7 +575,7 @@ function handleInfo (req, res) {
   var context;
 
   context = {
-    version   : require("../package").version
+    version   : require('../package').version
   };
 
   writeJsonResponse(res, context);
@@ -619,17 +619,17 @@ function handleListTests (req, res, expr) {
 function handleInstallTest (req, res, expr, url) {
   var buffers = [];
 
-  equal(req.headers["content-type"], "application/octet-stream");
+  equal(req.headers['content-type'], 'application/octet-stream');
 
-  req.on("data", function (chunk) {
+  req.on('data', function (chunk) {
     buffers.push(chunk);
   });
 
-  req.on("end", function () {
+  req.on('end', function () {
     var data = Buffer.concat(buffers);
 
     if (data.length == 0) {
-      HTTPERROR(400, "expected data");
+      HTTPERROR(400, 'expected data');
     }
 
     readPackageInfo(data, function (err, pkg) {
@@ -640,17 +640,17 @@ function handleInstallTest (req, res, expr, url) {
         throw err;
       }
 
-      pkgname = pkg.name + "@" + pkg.version;
-      filename = resolve(options.cachepath, pkgname + ".tar");
+      pkgname = pkg.name + '@' + pkg.version;
+      filename = resolve(options.cachepath, pkgname + '.tar');
 
-      equal(filename in FILELOCK, false, "package is about to install");
+      equal(filename in FILELOCK, false, 'package is about to install');
 
       FILELOCK(filename);
 
       exists(filename, function (doexists) {
         FILELOCK(filename);
-        if (url.query.force != "1") {
-          equal(doexists, false, "package already exists");
+        if (url.query.force != '1') {
+          equal(doexists, false, 'package already exists');
         }
         FILELOCK(filename);
 
@@ -683,7 +683,7 @@ function handleUninstallTest (req, res, expr) {
       var current;
 
       if (!(current = files.pop())) {
-        notEqual(count, 0, "no such test(s)");
+        notEqual(count, 0, 'no such test(s)');
         res.writeHead(200);
         return res.end();
       }
@@ -715,26 +715,26 @@ function handleUninstallTest (req, res, expr) {
 function handleRunTest (req, res, expr, url) {
   var root = options.cachepath;
   var filename;
-  var data = "";
+  var data = '';
 
-  filename = resolve(root, expr[1] + ".tar");
+  filename = resolve(root, expr[1] + '.tar');
 
-  req.setEncoding("utf8");
+  req.setEncoding('utf8');
 
-  req.on("data", function (chunk) {
+  req.on('data', function (chunk) {
     data += chunk;
   });
 
-  req.on("end", function () {
+  req.on('end', function () {
     exists(filename, function (doexists) {
       var job;
       var config;
 
-      equal(doexists, true, "package was not found: " + expr[1]);
-      equal(filename in FILELOCK, false, "package is about to install");
+      equal(doexists, true, 'package was not found: ' + expr[1]);
+      equal(filename in FILELOCK, false, 'package is about to install');
 
       if (data.length) {
-        equal(req.headers["content-type"], "application/json", "expected json");
+        equal(req.headers['content-type'], 'application/json', 'expected json');
         config = JSON.parse(data);
       }
 
@@ -744,7 +744,7 @@ function handleRunTest (req, res, expr, url) {
 
       for (var k in url.query) {
         switch (k) {
-          case "clients":
+          case 'clients':
           job.setRequestedCandidates(parseInt(url.query.clients));
           break;
         }
@@ -768,11 +768,11 @@ function handleAbortJob (req, res, expr) {
   job = Job.byId(parseInt(expr[1], 10));
 
   if (!job) {
-    HTTPERROR(404, "No such job");
+    HTTPERROR(404, 'No such job');
   }
 
   if (job.isRunning() == false) {
-    HTTPERROR(400, "Job #" + job.id + "is not running");
+    HTTPERROR(400, 'Job #' + job.id + 'is not running');
   }
 
   job.abort();
@@ -786,7 +786,7 @@ function handleListClients (req, res, expr) {
 
   switch (expr && expr[1]) {
 
-    case "slaves":
+    case 'slaves':
     result = TestClient.slaves;
     break;
 
@@ -807,7 +807,7 @@ function handleGetReport (req, res, expr) {
   job = Job.byId(parseInt(expr[1], 10));
 
   if (!job) {
-    HTTPERROR(404, "No such job");
+    HTTPERROR(404, 'No such job');
   }
 
   report = job.getReport();
@@ -819,12 +819,12 @@ function handleGetReport (req, res, expr) {
 function handleStatic (req, res, expr) {
   var path;
 
-  path = join(DASHBOARD_BASE, expr[1] ? expr[1] : "index.html");
+  path = join(DASHBOARD_BASE, expr[1] ? expr[1] : 'index.html');
 
   exists(path, function (doexists) {
 
     if (doexists == false) {
-      HTTPERROR(404, "not found");
+      HTTPERROR(404, 'not found');
     }
 
     readFile(path, function (err, data) {
@@ -833,8 +833,8 @@ function handleStatic (req, res, expr) {
         HTTPERROR(500, err.message);
       }
 
-      res.setHeader("Content-Type", CONTENT_TYPES[extname(path)]);
-      res.setHeader("Content-Length", data.length);
+      res.setHeader('Content-Type', CONTENT_TYPES[extname(path)]);
+      res.setHeader('Content-Length', data.length);
       res.writeHead(200);
       res.end(data);
 
@@ -845,8 +845,8 @@ function handleStatic (req, res, expr) {
 
 function writeJsonResponse (res, obj) {
   var data = JSON.stringify(obj);
-  res.setHeader("Content-Type", "application/json");
-  res.setHeader("Content-Length", data.length);
+  res.setHeader('Content-Type', 'application/json');
+  res.setHeader('Content-Length', data.length);
   res.writeHead(200);
   res.end(data);
 }
@@ -854,8 +854,8 @@ function writeJsonResponse (res, obj) {
 
 function getPackageMatchRegExp (q) {
   var regexp;
-  q = q && q.length ? q : "*";
-  regexp = new RegExp(q.replace(/\*/, "(.*)") + "(.*).tar");
+  q = q && q.length ? q : '*';
+  regexp = new RegExp(q.replace(/\*/, '(.*)') + '(.*).tar');
   return regexp;
 }
 
@@ -868,9 +868,9 @@ function readPackageInfo (bufferOrPath, C) {
   }
 
   if (Buffer.isBuffer(bufferOrPath)) {
-    exec("tar -xO ./package.json", onexit).stdin.end(bufferOrPath);
+    exec('tar -xO ./package.json', onexit).stdin.end(bufferOrPath);
   } else {
-    exec("tar -xOf " + bufferOrPath + " ./package.json", onexit);
+    exec('tar -xOf ' + bufferOrPath + ' ./package.json', onexit);
   }
 }
 
@@ -884,7 +884,7 @@ function createJob (path) {
   domain = createDomain();
   domain.add(job);
 
-  domain.on("error", function (err) {
+  domain.on('error', function (err) {
     job.finish(err);
   });
 
@@ -896,7 +896,7 @@ function Job (path) {
   EventEmitter.call(this);
 
   this.id = JOBIDGEN();
-  this.name = basename(path, ".tar");
+  this.name = basename(path, '.tar');
   this.testpath = path;
   this.createtime = Date.now();
   this.starttime = null;
@@ -906,7 +906,7 @@ function Job (path) {
 
   this.config = {};
 
-  this.report = { state: "initializing" };
+  this.report = { state: 'initializing' };
   
   this.requestedCandidates = 0;
 
@@ -926,10 +926,10 @@ inherits(Job, EventEmitter);
 Job.all                 = [];
 
 
-Object.defineProperty(Job, "runningJobs", {
+Object.defineProperty(Job, 'runningJobs', {
   get: function () {
     Job.all.reduce(function (prev, curr) {
-      prev = typeof prev == "number" ? prev : 0;
+      prev = typeof prev == 'number' ? prev : 0;
       return curr.isRunning() ? prev + 1 : prev;
     });
   }
@@ -950,7 +950,7 @@ Job.byId = function (id) {
 
 Job.prototype.setRequestedCandidates = function (val) {
   if (isNaN(val) || val < 0) {
-    throw new Error("Bad value for requestedCandidates");
+    throw new Error('Bad value for requestedCandidates');
   }
   this.requestedCandidates = val;
 };
@@ -981,7 +981,7 @@ Job.prototype.init = function () {
   var candidates;
 
   if (options.maxjobs && Job.runningJobs + 1 > options.maxjobs) {
-    notif(logJobInitError, this, "Too many running jobs");
+    notif(logJobInitError, this, 'Too many running jobs');
     return;
   }
 
@@ -998,7 +998,7 @@ Job.prototype.init = function () {
   if (candidates.length < 1 || 
     (self.requestedCandidates !== 0 &&
      candidates.length != self.requestedCandidates)) {
-    notif(logJobInitError, this, "Not enough candidates");
+    notif(logJobInitError, this, 'Not enough candidates');
     return;
   }
 
@@ -1009,7 +1009,7 @@ Job.prototype.init = function () {
   this.candidates = candidates;
   this.candidateCount = candidates.length;
 
-  this.report = { state: "running" };
+  this.report = { state: 'running' };
   this.setState(JOBSTATE_INITIALIZED);
 };
 
@@ -1063,8 +1063,8 @@ Job.prototype.setup = function () {
       cfg[k] = config[k];
     }
 
-    config["name"] = name;
-    config["clientid"] = candidates.indexOf(candidate) + 1;
+    config['name'] = name;
+    config['clientid'] = candidates.indexOf(candidate) + 1;
 
     ctx = JSON.stringify(config);
 
@@ -1107,11 +1107,11 @@ Job.prototype.handleTestError = function (candidate, msg) {
   idx = this.candidates.indexOf(candidate);
   this.candidates.splice(idx, 1);
 
-  reason = msg.toString("utf8", 5);
+  reason = msg.toString('utf8', 5);
 
-  this.abort(Error("Slave #" +
+  this.abort(Error('Slave #' +
                   candidate.id +
-                  " had a critical error: " +
+                  ' had a critical error: ' +
                   reason));
 
   return true;
@@ -1164,15 +1164,15 @@ Job.prototype.handleResult = function (client, msg) {
     return true;
   }
 
-  this.report.state = "collecting";
+  this.report.state = 'collecting';
   this.report.collection = this.report.collection || [];
-  this.report.collection.push(msg.toString("utf8", 5));
+  this.report.collection.push(msg.toString('utf8', 5));
 
-  console.log("----- Test result ----");
-  console.log(msg.toString("utf8", 5));
+  console.log('----- Test result ----');
+  console.log(msg.toString('utf8', 5));
 
   if (++this.finishCount == this.candidateCount) {
-    this.report.state = "ok";
+    this.report.state = 'ok';
     this.finish();
   }
 
@@ -1186,7 +1186,7 @@ Job.prototype.handleDisconnect = function (candidate, reason) {
   idx = this.candidates.indexOf(candidate);
   this.candidates.splice(idx, 1);
 
-  this.abort(Error("Slave #" + candidate.id + " disconnected without reason"));
+  this.abort(Error('Slave #' + candidate.id + ' disconnected without reason'));
 };
 
 
@@ -1195,9 +1195,9 @@ Job.prototype.abort = function (err) {
   var msg;
   var reason;
 
-  reason = (err && err.message) || "UNKNOWN_REASON";
+  reason = (err && err.message) || 'UNKNOWN_REASON';
 
-  this.report = { state: "error", reason: reason };
+  this.report = { state: 'error', reason: reason };
 
   msg = new Buffer(Buffer.byteLength(reason) + 5);
   msg.writeUInt8(SOP_ABORT, 0);
@@ -1217,7 +1217,7 @@ Job.prototype.finish = function (err) {
 
   if (this.state == JOBSTATE_FINISHED) {
     // TODO: Just ignore instead of throw
-    throw new Error("Already finished");
+    throw new Error('Already finished');
   }
 
   this.finishtime = Date.now();
@@ -1314,12 +1314,12 @@ function TestClient (sock, info) {
   this.role = info.role;
   this.remoteAddress = sock.upgradeReq.socket.remoteAddress;
   this.remotePort = sock.upgradeReq.socket.remotePort;
-  this.arch = info.arch || "na";
-  this.engineName = info.engineName || "na";
-  this.engineVersion = info.engineVersion || "na";
-  this.platform = info.platform || "na";
+  this.arch = info.arch || 'na';
+  this.engineName = info.engineName || 'na';
+  this.engineVersion = info.engineVersion || 'na';
+  this.platform = info.platform || 'na';
   this.cpus = info.cpus || 0;
-  this.state = "ready";
+  this.state = 'ready';
   this.handlers = null;
 
   this.constructor.all.push(this);
@@ -1329,9 +1329,9 @@ function TestClient (sock, info) {
 TestClient.all = [];
 
 
-Object.defineProperty(TestClient, "slaves", {
+Object.defineProperty(TestClient, 'slaves', {
   get: function () {
-    return this.all.filter(function (c) { return c.role == "slave" });
+    return this.all.filter(function (c) { return c.role == 'slave' });
   }
 });
 
@@ -1383,7 +1383,7 @@ TestClient.prototype.destroy = function (err) {
   while (idx--) {
     if ((handler = this.handlers[idx])) {
       this.removeHandler(handler);
-      if ("handleDisconnect" in handler) {
+      if ('handleDisconnect' in handler) {
         try {
           handler.handleDisconnect(this, err);
         } catch (er) {
@@ -1399,104 +1399,104 @@ TestClient.prototype.destroy = function (err) {
 
 
 function logServerListen (port, host) {
-  log("Server is listening to " + (host || "*") + ":" + port);
+  log('Server is listening to ' + (host || '*') + ':' + port);
 }
 
 
 function logServerError (err, time) {
-  console.error("----------------- SERVER ERROR ------------------");
+  console.error('----------------- SERVER ERROR ------------------');
   console.error(err && err.stack);
-  console.error("-------------------------------------------------");
-  log("Restarting server in " + (time / 1000) + " sec...");
+  console.error('-------------------------------------------------');
+  log('Restarting server in ' + (time / 1000) + ' sec...');
 }
 
 
 function logJobManagerError (err, time) {
-  console.error("-------------- JOB MANAGER ERROR ----------------");
+  console.error('-------------- JOB MANAGER ERROR ----------------');
   console.error(err && err.stack);
-  console.error("-------------------------------------------------");
-  log("Restarting job manager in " + (time / 1000)+ " sec...");
+  console.error('-------------------------------------------------');
+  log('Restarting job manager in ' + (time / 1000)+ ' sec...');
 }
 
 
 function logRequest (method, url) {
-  log("Request " + method + " " + url.pathname);
+  log('Request ' + method + ' ' + url.pathname);
 }
 
 
 function logRequestError (err, url) {
-  log("Request Error: " + err.message + " - " + url.href);
+  log('Request Error: ' + err.message + ' - ' + url.href);
   console.log(err.stack);
 }
 
 
 function logClientConnect (client) {
-  var addr = client.remoteAddress + ":" + client.remotePort;
-  log("Client connected " + addr);
+  var addr = client.remoteAddress + ':' + client.remotePort;
+  log('Client connected ' + addr);
 }
 
 
 function logClientDisconnect (client, reason) {
-  var addr = client.remoteAddress + ":" + client.remotePort;
-  log("Client disconnected " + addr + " (reason: " + reason + ")");
+  var addr = client.remoteAddress + ':' + client.remotePort;
+  log('Client disconnected ' + addr + ' (reason: ' + reason + ')');
 }
 
 
 function logUnhandledMessage (client, msg) {
-  var addr = client.remoteAddress + ":" + client.remotePort;
-  log("Unhandled message 0x" + msg[0].toString(16) + " by " + addr);
+  var addr = client.remoteAddress + ':' + client.remotePort;
+  log('Unhandled message 0x' + msg[0].toString(16) + ' by ' + addr);
 }
 
 
 function logJobInitError (job, reason) {
-  log("Could not init job#" + job.id + " Reason: " + reason);
+  log('Could not init job#' + job.id + ' Reason: ' + reason);
 }
 
 
 function logClientReject (client, reason) {
   var req = client.upgradeReq || {};
   var sock = req.socket || {};
-  var addr = (sock.remoteAddress || "na") + ":" + (sock.remotePort || "na");
-  log("Client '" + addr + "' was rejected, reason: " + reason);
+  var addr = (sock.remoteAddress || 'na') + ':' + (sock.remotePort || 'na');
+  log('Client "' + addr + '" was rejected, reason: ' + reason);
 }
 
 
 function logJobStateChange (job) {
   log((function () { switch (job.state) {
     case JOBSTATE_QUEUED:
-    return format("TestJob#%s: now queued",
+    return format('TestJob#%s: now queued',
                  job.id);
 
     case JOBSTATE_INITIALIZED:
-    return format("TestJob#%s: now initialized with %s slave(s)",
+    return format('TestJob#%s: now initialized with %s slave(s)',
                   job.id,
                   job.candidateCount);
 
     case JOBSTATE_INSTALLING:
-    return format("TestJob#%s: Installing test package on slaves (%s of %s)",
+    return format('TestJob#%s: Installing test package on slaves (%s of %s)',
                   job.id,
                   job.installCount,
                   job.candidateCount);
 
     case JOBSTATE_SETUP:
-    return format("TestJob#%s: Slaves are setting up (%s of %s)",
+    return format('TestJob#%s: Slaves are setting up (%s of %s)',
                   job.id,
                   job.setupCount,
                   job.candidateCount);
 
     case JOBSTATE_RUNNING:
-    return format("TestJob#%s: Running (%s of %s)",
+    return format('TestJob#%s: Running (%s of %s)',
                   job.id,
                   job.finishCount,
                   job.candidateCount);
 
     case JOBSTATE_FINISHED:
     if (job.lastError) {
-      return format("TestJob#%s: Finished with error (reason: %s)",
+      return format('TestJob#%s: Finished with error (reason: %s)',
                     job.id,
-                    job.lastError.message || "Unknown error");
+                    job.lastError.message || 'Unknown error');
     } else {
-      return format("TestJob#%s: Test is finished (%s ms)",
+      return format('TestJob#%s: Test is finished (%s ms)',
                     job.id,
                     job.finishtime - job.starttime);
     }
@@ -1505,7 +1505,7 @@ function logJobStateChange (job) {
 
 
 function logDebugInfo () {
-  log("WARNING: Server is running in debug-mode");
+  log('WARNING: Server is running in debug-mode');
 }
 
 

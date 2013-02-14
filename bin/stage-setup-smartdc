@@ -20,7 +20,7 @@ var getJsonOutput             = require("../lib/cliutil").getJsonOutput;
 var consts                    = require("../lib/consts");
 
 
-var SETUP_MACHINE_CMD         = resolve(__dirname, "./stage-setup-machine");
+var SETUP_MACHINE_CMD         = resolve(__dirname, './stage-setup-machine');
 
 var DEFAULT_OPTIONS           = { "machines"    : 1,
                                   "type"        : null,

@@ -1,22 +1,22 @@
 #!/usr/bin/env node
 
-"use strict";
+'use strict';
 
-var version                   = require("../lib/cliutil").version;
-var usage                     = require("../lib/cliutil").usage;
-var help                      = require("../lib/cliutil").help;
-var halt                      = require("../lib/cliutil").halt;
-var url                       = require("../lib/cliutil").url;
-var toHttpUrl                 = require("../lib/cliutil").toHttpUrl;
+var version                   = require('../lib/cliutil').version;
+var usage                     = require('../lib/cliutil').usage;
+var help                      = require('../lib/cliutil').help;
+var halt                      = require('../lib/cliutil').halt;
+var url                       = require('../lib/cliutil').url;
+var toHttpUrl                 = require('../lib/cliutil').toHttpUrl;
 
-var listTests                 = require("../lib/api").listTests;
+var listTests                 = require('../lib/api').listTests;
 
-var consts                    = require("../lib/consts");
+var consts                    = require('../lib/consts');
 
 
-var DEFAULT_OPTIONS           = { "url"         : consts.DEFAULT_URL,
-                                  "json"        : false,
-                                  "pattern"     : null
+var DEFAULT_OPTIONS           = { 'url'         : consts.DEFAULT_URL,
+                                  'json'        : false,
+                                  'pattern'     : null
                                 };
 
 
@@ -31,32 +31,32 @@ function main () {
   while ((arg = args.shift())) {
     switch (arg) {
 
-      case "-v":
-      case "--version":
+      case '-v':
+      case '--version':
       return version();
 
-      case "--usage":
-      return usage("[pattern]");
+      case '--usage':
+      return usage('[pattern]');
 
-      case "--help":
+      case '--help':
       return help();
 
-      case "--url":
-      case "--hostname":
-      case "--port":
-      case "--token":
-      case "--secure":            
+      case '--url':
+      case '--hostname':
+      case '--port':
+      case '--token':
+      case '--secure':            
       options.url = url(options.url, arg, args.shift());
       break;
 
-      case "--json":
+      case '--json':
       options.json = true;
       break;
 
       default:
 
-      if (arg[0] == "-") {
-        halt("unknown option " + arg);
+      if (arg[0] == '-') {
+        halt('unknown option ' + arg);
       }
 
       options.pattern = arg;
@@ -75,10 +75,10 @@ function main () {
       return console.log(JSON.stringify(result));
     }
     
-    console.log("total %s", result.length);
+    console.log('total %s', result.length);
 
     result.forEach(function (info) {
-      console.log(info.name + "@" + info.version);
+      console.log(info.name + '@' + info.version);
     });
   });
 }

@@ -1,21 +1,21 @@
 #!/usr/bin/env node
 
-"use strict";
+'use strict';
 
-var uninstallTests            = require("../lib/api").uninstallTests;
+var uninstallTests            = require('../lib/api').uninstallTests;
 
-var version                   = require("../lib/cliutil").version;
-var usage                     = require("../lib/cliutil").usage;
-var help                      = require("../lib/cliutil").help;
-var halt                      = require("../lib/cliutil").halt;
-var url                       = require("../lib/cliutil").url;
-var toHttpUrl                 = require("../lib/cliutil").toHttpUrl;
+var version                   = require('../lib/cliutil').version;
+var usage                     = require('../lib/cliutil').usage;
+var help                      = require('../lib/cliutil').help;
+var halt                      = require('../lib/cliutil').halt;
+var url                       = require('../lib/cliutil').url;
+var toHttpUrl                 = require('../lib/cliutil').toHttpUrl;
 
-var consts                    = require("../lib/consts");
+var consts                    = require('../lib/consts');
 
 
-var DEFAULT_OPTIONS           = { "url"         : consts.DEFAULT_URL,
-                                  "pattern"   : null
+var DEFAULT_OPTIONS           = { 'url'         : consts.DEFAULT_URL,
+                                  'pattern'   : null
                                 };
 
 
@@ -29,28 +29,28 @@ function main () {
   while ((arg = args.shift())) {
     switch (arg) {
 
-      case "-v":
-      case "--version":
+      case '-v':
+      case '--version':
       return version();
 
-      case "--usage":
-      return usage("<pattern>");
+      case '--usage':
+      return usage('<pattern>');
 
-      case "--help":
+      case '--help':
       return help();
 
-      case "--url":
-      case "--hostname":
-      case "--port":
-      case "--token":
-      case "--secure":      
+      case '--url':
+      case '--hostname':
+      case '--port':
+      case '--token':
+      case '--secure':      
       options.url = url(options.url, arg, args.shift());
       break;
 
       default:
 
-      if (arg[0] == "-") {
-        halt("unknown option " + arg);
+      if (arg[0] == '-') {
+        halt('unknown option ' + arg);
       }
 
       options.pattern = arg;
@@ -61,7 +61,7 @@ function main () {
   options.url = toHttpUrl(options.url);
 
   if (!options.pattern || !options.pattern.length) {
-    halt("a <pattern> must be supplied");
+    halt('a <pattern> must be supplied');
   }
 
   uninstallTests(options.url, options.pattern, function (err, result) {

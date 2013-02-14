@@ -83,35 +83,35 @@ if (initStage() == true) {
 }
 */
 
-"use strict";
+'use strict';
 
-var exec                      = require("child_process").exec;
+var exec                      = require('child_process').exec;
 
-var readFileSync              = require("fs").readFileSync;
-var writeFileSync             = require("fs").writeFileSync;
-var existsSync                = require("fs").existsSync;
-var mkdirSync                 = require("fs").mkdirSync;
-var statSync                  = require("fs").statSync;
+var readFileSync              = require('fs').readFileSync;
+var writeFileSync             = require('fs').writeFileSync;
+var existsSync                = require('fs').existsSync;
+var mkdirSync                 = require('fs').mkdirSync;
+var statSync                  = require('fs').statSync;
 
-var resolve                   = require("path").resolve;
-var basename                  = require("path").basename;
-var dirname                   = require("path").dirname;
+var resolve                   = require('path').resolve;
+var basename                  = require('path').basename;
+var dirname                   = require('path').dirname;
 
-var format                    = require("util").format;
+var format                    = require('util').format;
 
-var version                   = require("../lib/cliutil").version;
-var usage                     = require("../lib/cliutil").usage;
-var help                      = require("../lib/cliutil").help;
-var halt                      = require("../lib/cliutil").halt;
-var url                       = require("../lib/cliutil").url;
+var version                   = require('../lib/cliutil').version;
+var usage                     = require('../lib/cliutil').usage;
+var help                      = require('../lib/cliutil').help;
+var halt                      = require('../lib/cliutil').halt;
+var url                       = require('../lib/cliutil').url;
 
 
-var DEFAULT_OPTIONS           = { "basepath"    : process.cwd(),
-                                  "author"      : process.env["STAGE_AUTHOR"] ||
-                                                  process.env["USER"],
-                                  "version"     : "1.0.0",
-                                  "name"        : null,
-                                  "force"       : false
+var DEFAULT_OPTIONS           = { 'basepath'    : process.cwd(),
+                                  'author'      : process.env['STAGE_AUTHOR'] ||
+                                                  process.env['USER'],
+                                  'version'     : '1.0.0',
+                                  'name'        : null,
+                                  'force'       : false
                                 };
 
 
@@ -127,36 +127,36 @@ function main () {
   while ((arg = args.shift())) {
     switch (arg) {
 
-      case "-v":
-      case "--version":
+      case '-v':
+      case '--version':
       return version();
 
-      case "--usage":
-      return usage("<path>");
+      case '--usage':
+      return usage('<path>');
 
-      case "--help":
+      case '--help':
       return help();
 
-      case "--force":
+      case '--force':
       options.force = true;
       break;
 
-      case "--package-author":
+      case '--package-author':
       options.author = args.shift();
       break;
 
-      case "--package-name":
+      case '--package-name':
       options.name = args.shift();
       break;
 
-      case "--package-version":
+      case '--package-version':
       options.version = args.shift();
       break;
 
       default:
 
-      if (arg[0] == "-") {
-        halt("unknown option " + arg);
+      if (arg[0] == '-') {
+        halt('unknown option ' + arg);
       }
 
       options.basepath = resolve(arg);
@@ -166,18 +166,18 @@ function main () {
 
 
   if (!options.author) {
-    halt("Option --package-author must be set");
+    halt('Option --package-author must be set');
   }
 
-  packagePath = resolve(options.basepath, "package.json");
-  testPath = resolve(options.basepath, "test.js");
+  packagePath = resolve(options.basepath, 'package.json');
+  testPath = resolve(options.basepath, 'test.js');
 
   if (existsSync(packagePath) && !options.force) {
-    halt("File '" + packagePath + "' already exists");
+    halt('File "' + packagePath + '" already exists');
   }
 
   if (existsSync(testPath) && !options.force) {
-    halt("File '" + packagePath + "' already exists");
+    halt('File "' + packagePath + '" already exists');
   }
 
   if (!options.name) {
@@ -189,7 +189,7 @@ function main () {
   writePackageJson(packagePath);
   writeTestJs(testPath);
 
-  console.log("Test '%s@%s' was successfully initialized",
+  console.log('Test "%s@%s" was successfully initialized',
               options.name,
               options.version);
 }
@@ -199,7 +199,7 @@ function writePackageJson (path) {
   var content;
   var context;
 
-  content = getNamedSection("package");
+  content = getNamedSection('package');
 
   context = {
     name        : options.name,
@@ -215,12 +215,12 @@ function writeTestJs (path) {
   var content;
   var context;
 
-  content = getNamedSection("test");
+  content = getNamedSection('test');
 
   context = {
     name        : options.name,
     program     : basename(process.argv[1]),
-    version     : require("../package").version
+    version     : require('../package').version
   };
 
   writeFileSync(path, template(content, context));
@@ -245,7 +245,7 @@ function mkdirp (path, mode, made) {
     mkdirSync(path, mode);
     made = made || path;    
   } catch (er) {
-    if (er.code == "ENOENT") {
+    if (er.code == 'ENOENT') {
       made = mkdirp(dirname(path), mode, made);
       mkdirp(path, mode, made);
     } else {
@@ -268,7 +268,7 @@ function template (content, context) {
   var re;
   context = context || {};
   for (var k in context) {
-    re = new RegExp("{{=" + k + "}}");
+    re = new RegExp('{{=' + k + '}}');
     content = content.replace(re, context[k]);
   }
   return content;

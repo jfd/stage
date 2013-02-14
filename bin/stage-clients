@@ -1,21 +1,21 @@
 #!/usr/bin/env node
 
-"use strict";
+'use strict';
 
-var version                   = require("../lib/cliutil").version;
-var usage                     = require("../lib/cliutil").usage;
-var help                      = require("../lib/cliutil").help;
-var halt                      = require("../lib/cliutil").halt;
-var url                       = require("../lib/cliutil").url;
-var toHttpUrl                 = require("../lib/cliutil").toHttpUrl;
+var version                   = require('../lib/cliutil').version;
+var usage                     = require('../lib/cliutil').usage;
+var help                      = require('../lib/cliutil').help;
+var halt                      = require('../lib/cliutil').halt;
+var url                       = require('../lib/cliutil').url;
+var toHttpUrl                 = require('../lib/cliutil').toHttpUrl;
 
-var listClients               = require("../lib/api").listClients;
+var listClients               = require('../lib/api').listClients;
 
-var consts                    = require("../lib/consts");
+var consts                    = require('../lib/consts');
 
 
-var DEFAULT_OPTIONS           = { "url"         : consts.DEFAULT_URL,
-                                  "json"        : false
+var DEFAULT_OPTIONS           = { 'url'         : consts.DEFAULT_URL,
+                                  'json'        : false
                                 };
 
 
@@ -30,30 +30,30 @@ function main () {
   while ((arg = args.shift())) {
     switch (arg) {
 
-      case "--usage":
+      case '--usage':
       return usage();
 
-      case "--help":
+      case '--help':
       return help();
 
-      case "-v":
-      case "--version":
+      case '-v':
+      case '--version':
       return version();
 
-      case "--url":
-      case "--hostname":
-      case "--port":
-      case "--token":
-      case "--secure":            
+      case '--url':
+      case '--hostname':
+      case '--port':
+      case '--token':
+      case '--secure':            
       options.url = url(options.url, arg, args.shift());
       break;
 
-      case "--json":
+      case '--json':
       options.json = true;
       break;
 
       default:
-      return halt("bad argument - " + arg);
+      return halt('bad argument - ' + arg);
     }
   }
 
@@ -68,10 +68,10 @@ function main () {
       return console.log(JSON.stringify(result));
     }
 
-    console.log("total %s", result.length);
+    console.log('total %s', result.length);
 
     result.forEach(function (c) {
-      console.log("#%s - %s - %s:%s",
+      console.log('#%s - %s - %s:%s',
                   c.id,
                   c.role.toUpperCase(),
                   c.remoteAddress,
