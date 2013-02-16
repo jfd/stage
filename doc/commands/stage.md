@@ -109,6 +109,7 @@ Copyright (C) 2013 Johan Dahlberg <http://jfd.github.com>
 * stage-init-test(1)
 * stage-install(1)
 * stage-jobs(1)
+* stage-localenv(1)
 * stage-master(1)
 * stage-run(1)
 * stage-setup-machine(1)
