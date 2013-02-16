@@ -103,6 +103,7 @@ Copyright (C) 2013 Johan Dahlberg <http://jfd.github.com>
 ## SEE ALSO
 
 * stage-abort(1)
+* stage-clean-smartdc(1)
 * stage-clients(1)
 * stage-collect(1)
 * stage-init-test(1)
