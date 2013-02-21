@@ -61,6 +61,10 @@ Available options for command:
 * `--account <account>`:  
     Path to the SSH/RSA key associated with your Joyent account
 
+* `--no-of-machines <number>`:  
+    Number of machines to setup2
+
+
 ## EXAMPLES
 
 Creates a new machine on Joyent SmartDC and then install and starts a Master Server:
