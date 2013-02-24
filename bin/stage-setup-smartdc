@@ -298,7 +298,7 @@ function createAndSetupMachines (count, C) {
     function onsetupdone (err) {
       if (err) return C(err);
       result.machines.push(info);
-      if (count) next(count - 1);
+      if (count) return next(count - 1);
       return C(null, result);
     }
 
