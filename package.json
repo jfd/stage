@@ -37,7 +37,7 @@
   },
 	"repository": {
 		"type": "git",
-		"url": "git://github.com/hydna/node-stage.git"
+		"url": "git://github.com/jfd/stage.git"
 	},  
   "engines": {
     "node": ">=0.7.7"
