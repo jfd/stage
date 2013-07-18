@@ -1,7 +1,7 @@
 .\" Generated with Ronnjs 0.3.8
 .\" http://github.com/kapouer/ronnjs/
 .
-.TH "STAGE\-CLEAN\-SMARTDC" "1" "February 2013" "" ""
+.TH "STAGE\-CLEAN\-SMARTDC" "1" "March 2013" "" ""
 .
 .SH "NAME"
 \fBstage-clean-smartdc\fR \-\- Stops and deletes all your SmartDC machines
@@ -85,12 +85,6 @@ Joyent account name
 .br
 Key name of the SSH/RSA Key associated with your Joyent account
 .
-.IP "\(bu" 4
-\fB\-\-account <account>\fR:
-.
-.br
-Path to the SSH/RSA key associated with your Joyent account
-.
 .IP "" 0
 .
 .SH "EXAMPLES"
@@ -109,28 +103,22 @@ stage\-clean\-smartdc \-\-ignore\-confirm
 The following enivornment variables are used by command:
 .
 .P
-  \fISDC_CLI_URL\fR
+  \fISDC_URL\fR
 .
 .br
   The \fIURL\fR for the Joyent API (e\.g\. https://us\-sw\-1\.api\.joyentcloud\.com/)
 .
 .P
-  \fISDC_CLI_ACCOUNT\fR
+  \fISDC_ACCOUNT\fR
 .
 .br
   Joyent account name
 .
 .P
-  \fISDC_CLI_KEY_ID\fR
+  \fISDC_KEY_ID\fR
 .
 .br
   Key name of the SSH/RSA Key associated with your Joyent account
-.
-.P
-  \fISDC_CLI_IDENTITY\fR
-.
-.br
-  Path to the SSH/RSA key associated with your Joyent account
 .
 .SH "COPYRIGHT"
 Copyright (C) 2013 Johan Dahlberg \fIhttp://jfd\.github\.com\fR

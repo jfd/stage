@@ -30,10 +30,9 @@ var DEFAULT_OPTIONS           = { "machines"    : 1,
                                   "rloglevel"   : null,
                                   "rtoken"      : null,
                                   "rmaxjobs"    : null,
-                                  "sdcUrl"      : process.env["SDC_CLI_URL"],
-                                  "sdcAccount"  : process.env["SDC_CLI_ACCOUNT"],
-                                  "sdcKeyId"    : process.env["SDC_CLI_KEY_ID"],
-                                  "sdcIdentity" : process.env["SDC_CLI_IDENTITY"],
+                                  "sdcUrl"      : process.env["SDC_URL"],
+                                  "sdcAccount"  : process.env["SDC_ACCOUNT"],
+                                  "sdcKeyId"    : process.env["SDC_KEY_ID"],
                                   "quiet"       : false,
                                   "debug"       : true
                                 };
@@ -105,10 +104,6 @@ function main () {
       options.sdcKeyId = args.shift();
       break;
 
-      case "--identity":
-      options.sdcIdentity = args.shift();
-      break;
-
       default:
 
       if (arg[0] == "-") {
@@ -127,32 +122,25 @@ function main () {
          "\n\n  npm install smartdc -g\n");
   }
 
-  if ("SDC_CLI_URL" in process.env == false) {
+  if ("SDC_URL" in process.env == false) {
     if (!options.sdcUrl) {
-      halt("expected --sdcurl or environment variable SDC_CLI_URL");
+      halt("expected --sdcurl or environment variable SDC_URL");
     }
-    process.env["SDC_CLI_URL"] = options.sdcUrl;
+    process.env["SDC_URL"] = options.sdcUrl;
   }
 
-  if ("SDC_CLI_ACCOUNT" in process.env == false) {
+  if ("SDC_ACCOUNT" in process.env == false) {
     if (!options.sdcAccount) {
-      halt("expected --account or environment variable SDC_CLI_ACCOUNT");
+      halt("expected --account or environment variable SDC_ACCOUNT");
     }
-    process.env["SDC_CLI_ACCOUNT"] = options.sdcAccount;
+    process.env["SDC_ACCOUNT"] = options.sdcAccount;
   }
 
-  if ("SDC_CLI_KEY_ID" in process.env == false) {
+  if ("SDC_KEY_ID" in process.env == false) {
     if (!options.sdcKeyId) {
-      halt("expected --keyId or environment variable SDC_CLI_KEY_ID");
+      halt("expected --keyId or environment variable SDC_KEY_ID");
     }
-    process.env["SDC_CLI_KEY_ID"] = options.sdcKeyId;
-  }
-
-  if ("SDC_CLI_IDENTITY" in process.env == false) {
-    if (!options.sdcIdentity) {
-      halt("expected --identity or environment variable SDC_CLI_IDENTITY");
-    }
-    process.env["SDC_CLI_IDENTITY"] = options.sdcIdentity;
+    process.env["SDC_KEY_ID"] = options.sdcKeyId;
   }
 
   if (options.type === null || /^slave|^master/.test(options.type) == false) {

@@ -58,9 +58,6 @@ Available options for command:
 * `--keyid <keyid>`:  
     Key name of the SSH/RSA Key associated with your Joyent account
 
-* `--account <account>`:  
-    Path to the SSH/RSA key associated with your Joyent account
-
 * `--no-of-machines <number>`:  
     Number of machines to setup2
 
@@ -79,17 +76,14 @@ Creates five new Joyent SmartDC machines and then installs Stage Slave Server on
 
 The following enivornment variables are used by command:
 
-  *SDC\_CLI\_URL*  
+  *SDC\_URL*  
   The _URL_ for the Joyent API (e.g. https://us-sw-1.api.joyentcloud.com/)
 
-  *SDC\_CLI\_ACCOUNT*  
+  *SDC\_ACCOUNT*  
   Joyent account name
 
-  *SDC\_CLI\_KEY\_ID*  
+  *SDC\_KEY\_ID*  
   Key name of the SSH/RSA Key associated with your Joyent account
-
-  *SDC\_CLI\_IDENTITY*  
-  Path to the SSH/RSA key associated with your Joyent account
 
 ## COPYRIGHT
 
