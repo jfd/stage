@@ -465,10 +465,17 @@ TestJob.prototype.onchildexit = function (err, stdout, stderr) {
     break;
 
     case JOBSTATE_RUNNING:
-    graph = {
-      haderror    : !!err,
-      report      : stdout
-    };
+    if (err) {
+      graph = {
+        haderror    : true,
+        report      : JSON.stringify({ message: stderr });
+      };
+    } else {
+      graph = {
+        haderror    : false,
+        report      : stdout
+      };
+    }
     this.send(COP_RESULT, new Buffer(JSON.stringify(graph)));
     notif(logTestResult, this, graph);
     this.destroy();
