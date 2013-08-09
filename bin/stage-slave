@@ -375,7 +375,7 @@ function handleStart (msg) {
 function handleAbort (msg) {
   var id;
   var job;
-  // var reason;
+  var reason;
 
   id = msg.readUInt32BE(1);
   reason = msg.toString('utf8', 5);
