@@ -468,7 +468,7 @@ TestJob.prototype.onchildexit = function (err, stdout, stderr) {
     if (err) {
       graph = {
         haderror    : true,
-        report      : JSON.stringify({ message: stderr });
+        report      : JSON.stringify({ message: stderr })
       };
     } else {
       graph = {
