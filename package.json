@@ -33,7 +33,9 @@
   "dependencies": {
     "ws": "~0.4.22",
     "temporary": "~0.0.5",
-    "forever": "~0.10.0"
+    "forever": "~0.10.0",
+    "ssh2": "0.2.14",
+    "smartdc": "7.1.1"
   },
 	"repository": {
 		"type": "git",
