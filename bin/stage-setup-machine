@@ -129,7 +129,7 @@ function main () {
 
   if (options.privatekey) {
     targets.forEach(function (target) {
-      target.privateKey = options.privateKey;
+      target.privateKey = options.privatekey;
     });
   }
 
@@ -336,14 +336,21 @@ function install (details, pkg, C) {
 
   function onnodecheck (err, stdout) {
     if (err || stdout.length == 0) {
-      cleanup(new Error('dep `node` is not available'));
+      cleanup(new Error('dep `node` is not installed on remote machine'));
+    } 
+    remoteExec(remote, 'which make', onmakecheck);
+  }
+
+  function onmakecheck (err, stdout) {
+    if (err || stdout.length == 0) {
+      cleanup(new Error('dep `make` is not installed on remote machine'));
     } 
     remoteExec(remote, 'which npm ', onnpmcheck);
   }
 
   function onnpmcheck (err, stdout) {
     if (err || stdout.length == 0) {
-      cleanup(new Error('dep `npm` is not available'));
+      cleanup(new Error('dep `npm` is not installed on remote machine'));
     }
     remoteExec(remote, 'pwd ', onworkdir);
   }
@@ -530,7 +537,7 @@ function setupConnection (opts, attempts, C) {
   conn.on('keyboard-interactive', onkeyboard);
   conn.on('error', onerror);
   conn.on('close', onclose);
-
+  console.log(opts);
   conn.connect(opts);
 
   return conn;
