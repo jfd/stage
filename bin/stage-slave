@@ -236,6 +236,7 @@ function runConnection () {
   url = parseUrl(options.url, true);
 
   url.search = null;
+  url.pathname = '/';
   url.query.role = 'slave';
   url.query.platform = platform();
   url.query.arch = arch();
