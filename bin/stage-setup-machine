@@ -4,7 +4,7 @@
 
 var exec                      = require('child_process').exec;
 
-var readFile                  = require('fs').readFile;
+var fs                        = require('fs');
 
 var resolve                   = require('path').resolve;
 
@@ -39,7 +39,8 @@ var DEFAULT_OPTIONS           = { 'type'        : null,
                                   'rtoken'      : null,
                                   'config'      : {},
                                   'quiet'       : false,
-                                  'debug'       : true
+                                  'debug'       : true,
+                                  'privatekey'  : null
                                 };
 
 
@@ -99,6 +100,10 @@ function main () {
       options.rtoken = args.shift();
       break;
 
+      case '--private-key':
+      options.privatekey = fs.readFileSync(args.shift()).toString();
+      break;
+
       default:
 
       if (arg[0] == '-') {
@@ -120,6 +125,12 @@ function main () {
 
   if (targets.length == 0) {
     halt('Expected at least one install target');
+  }
+
+  if (options.privatekey) {
+    targets.forEach(function (target) {
+      target.privateKey = options.privateKey;
+    });
   }
 
   if (options.type == 'slave') {
@@ -353,7 +364,7 @@ function install (details, pkg, C) {
 
   function ondircreated (err) {
     if (err) cleanup(err);
-    log('Unpacking application package on `%s`...', addr);
+    log('Unpacking application package on `%s` `%s`...', addr, workdir);
     remote.exec('tar xz -C ' + workdir, function (err, stream) {
       if (err) cleanup(err);
       waitForRemoteExit(stream, onunpack);
@@ -436,7 +447,7 @@ function getNdtPackage (C) {
     filename = stdout.split('\n')[0];
     path = resolve(tempdir.path, filename);
 
-    readFile(path, function (err, data) {
+    fs.readFile(path, function (err, data) {
       tempdir.rmdir();
       return C(err, data);
     });

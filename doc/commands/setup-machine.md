@@ -49,6 +49,9 @@ Available options for command:
 * `--remote-url <url>`:  
     The _url_ in which the target machine(s) should connect to. This option is only valid if target is _<slave>_
 
+* `--private-key <path>`:  
+          The _path_ to the private key to use when issuing the SSH-connection. This options is optional and defaults to _<NONE>_
+
 
 ## EXAMPLES
 
