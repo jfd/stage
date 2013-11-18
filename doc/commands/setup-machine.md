@@ -52,6 +52,9 @@ Available options for command:
 * `--private-key <path>`:  
           The _path_ to the private key to use when issuing the SSH-connection. This options is optional and defaults to _<NONE>_
 
+* `--init-command <cmd>`:  
+          An initial command to run when connection is established to remote machine. This options is optional and defaults to _<NONE>_
+
 
 ## EXAMPLES
 

@@ -40,7 +40,8 @@ var DEFAULT_OPTIONS           = { 'type'        : null,
                                   'config'      : {},
                                   'quiet'       : false,
                                   'debug'       : true,
-                                  'privatekey'  : null
+                                  'privatekey'  : null,
+                                  'initcmd'     : null
                                 };
 
 
@@ -102,6 +103,10 @@ function main () {
 
       case '--private-key':
       options.privatekey = fs.readFileSync(args.shift()).toString();
+      break;
+
+      case '--init-command':
+      options.initcmd = args.shift();
       break;
 
       default:
@@ -331,21 +336,44 @@ function install (details, pkg, C) {
   function onconnection (err, conn) {
     if (err) cleanup(err);
     remote = conn;
-    remoteExec(remote, 'which node', onnodecheck);
+    if (options.initcmd) {
+      log('Executing initial command `%s`', options.initcmd);
+      remoteExec(remote, options.initcmd, oninitcmd);
+    } else {
+      oninitcmd(null);
+    }
+  }
+
+  function oninitcmd (err, stdout) {
+    var msg;
+    if (err) {
+      msg = 'Faild to execute init command `' +
+            options.initcmd +
+            '`, message:' +
+            err.message;
+      cleanup(new Error(msg));
+    } else {
+      log("Checking for `node`....");
+      remoteExec(remote, 'which node', onnodecheck);
+    }
   }
 
   function onnodecheck (err, stdout) {
     if (err || stdout.length == 0) {
       cleanup(new Error('dep `node` is not installed on remote machine'));
-    } 
-    remoteExec(remote, 'which make', onmakecheck);
+    } else {
+      log("Checking for `make`....");
+      remoteExec(remote, 'which make', onmakecheck);
+    }
   }
 
   function onmakecheck (err, stdout) {
     if (err || stdout.length == 0) {
       cleanup(new Error('dep `make` is not installed on remote machine'));
-    } 
-    remoteExec(remote, 'which npm ', onnpmcheck);
+    }  else {
+      log("Checking for `npm`....");
+      remoteExec(remote, 'which npm ', onnpmcheck);
+    }
   }
 
   function onnpmcheck (err, stdout) {
@@ -537,7 +565,7 @@ function setupConnection (opts, attempts, C) {
   conn.on('keyboard-interactive', onkeyboard);
   conn.on('error', onerror);
   conn.on('close', onclose);
-  console.log(opts);
+
   conn.connect(opts);
 
   return conn;
