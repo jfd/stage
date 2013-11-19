@@ -13,52 +13,52 @@ Creates a new machine (or machines) on Joyent SmartDC and then installs _stage_ 
 
 Available options for command:
 
-* `-v`, `--version`:  
+* `-v`, `--version`:
     Shows current version of the command, then exit
 
-* `--help`:  
+* `--help`:
     Shows the manual page entry for command
 
-* `--usage`:  
+* `--usage`:
     Show command usage, then exit
 
-* `--quiet`:  
+* `--quiet`:
     Do not print any information.
 
-* `--silent`:  
+* `--silent`:
     See _--quiet_
 
-* `--debug`:  
+* `--debug`:
     More verbose output
 
-* `--reconnect-attempts <attempts>`:  
+* `--reconnect-attempts <attempts>`:
     Number of reconnect attempts. Defaults to 50
 
-* `--remote-port <port>`:  
+* `--remote-port <port>`:
     The _port_ in which the target machine(s) should listen for public connections. This option is only valid if target is _<master>_
 
-* `--remote-loglevel <silent|fatal|warn|info|verb|debug>`:  
+* `--remote-loglevel <silent|fatal|warn|info|verb|debug>`:
     The _loglevel_ for the remote target machine(s). This option is only valid if target is _<master>_
 
-* `--remote-maxjobs <number>`:  
+* `--remote-maxjobs <number>`:
     Maximum number of simultaneously running jobs  which the target machine(s) should work on. This option is only valid if target is _<master>_
 
-* `--remote-token <token>`:  
+* `--remote-token <token>`:
     The _token_ for the target machine(s). This option is only valid if target is _<master>_
 
-* `--remote-url <url>`:  
+* `--remote-url <url>`:
     The _url_ in which the target machine(s) should connect to. This option is only valid if target is _<slave>_
 
-* `--sdcurl <url>`:  
+* `--sdcurl <url>`:
     The _URL_ for the Joyent API (e.g. https://us-sw-1.api.joyentcloud.com/)
 
-* `--account <account>`:  
+* `--account <account>`:
     Joyent account name
 
-* `--keyid <keyid>`:  
+* `--keyid <keyid>`:
     Key name of the SSH/RSA Key associated with your Joyent account
 
-* `--no-of-machines <number>`:  
+* `--no-of-machines <number>`:
     Number of machines to setup2
 
 
@@ -76,13 +76,13 @@ Creates five new Joyent SmartDC machines and then installs Stage Slave Server on
 
 The following enivornment variables are used by command:
 
-  *SDC\_URL*  
+  *SDC\_URL*
   The _URL_ for the Joyent API (e.g. https://us-sw-1.api.joyentcloud.com/)
 
-  *SDC\_ACCOUNT*  
+  *SDC\_ACCOUNT*
   Joyent account name
 
-  *SDC\_KEY\_ID*  
+  *SDC\_KEY\_ID*
   Key name of the SSH/RSA Key associated with your Joyent account
 
 ## COPYRIGHT
