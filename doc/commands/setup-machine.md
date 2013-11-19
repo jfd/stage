@@ -13,46 +13,46 @@ Installs _stage_ on one or more remote machine via SSH.
 
 Available options for command:
 
-* `-v`, `--version`:  
+* `-v`, `--version`:
     Shows current version of the command, then exit
 
-* `--help`:  
+* `--help`:
     Shows the manual page entry for command
 
-* `--usage`:  
+* `--usage`:
     Show command usage, then exit
 
-* `--quiet`:  
+* `--quiet`:
     Do not print any information.
 
-* `--silent`:  
+* `--silent`:
     See _--quiet_
 
-* `--debug`:  
+* `--debug`:
     More verbose output
 
-* `--reconnect-attempts <attempts>`:  
+* `--reconnect-attempts <attempts>`:
     Number of reconnect attempts. Defaults to 50
 
-* `--remote-port <port>`:  
+* `--remote-port <port>`:
     The _port_ in which the target machine(s) should listen for public connections. This option is only valid if target is _<master>_
 
-* `--remote-loglevel <silent|fatal|warn|info|verb|debug>`:  
+* `--remote-loglevel <silent|fatal|warn|info|verb|debug>`:
     The _loglevel_ for the remote target machine(s). This option is only valid if target is _<master>_
 
-* `--remote-maxjobs <number>`:  
+* `--remote-maxjobs <number>`:
     Maximum number of simultaneously running jobs  which the target machine(s) should work on. This option is only valid if target is _<master>_
 
-* `--remote-token <token>`:  
+* `--remote-token <token>`:
     The _token_ for the target machine(s). This option is only valid if target is _<master>_
 
-* `--remote-url <url>`:  
+* `--remote-url <url>`:
     The _url_ in which the target machine(s) should connect to. This option is only valid if target is _<slave>_
 
-* `--private-key <path>`:  
+* `--private-key <path>`:
           The _path_ to the private key to use when issuing the SSH-connection. This options is optional and defaults to _<NONE>_
 
-* `--init-command <cmd>`:  
+* `--init-command <cmd>`:
           An initial command to run when connection is established to remote machine. This options is optional and defaults to _<NONE>_
 
 
