@@ -1,3 +1,8 @@
+0.9.0 / 2013-11-20
+  * Command 'setup-machine' now works with private-keys
+  * Command 'setup-machine' now accepts --init-command
+  * Command 'setup-smartdc' is now comaptible with new API
+
 0.8.2 / 2013-01-30
   * Added command 'stage-localenv'
 
