@@ -59,7 +59,14 @@ Available options for command:
     Key name of the SSH/RSA Key associated with your Joyent account
 
 * `--no-of-machines <number>`:
-    Number of machines to setup2
+    Number of machines to setup.
+
+* `--private-key <path>`:
+    The _path_ to the private key to use when issuing the SSH-connection. This options is optional and defaults to _<NONE>_
+
+* `--image <path>`:
+    The image to use when creating the Joyent machine. See Joyent documentation for more information.
+
 
 
 ## EXAMPLES
