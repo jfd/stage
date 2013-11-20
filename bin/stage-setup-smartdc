@@ -4,8 +4,6 @@
 
 var exec                      = require("child_process").exec;
 
-var readFileSync              = require("fs").readFileSync;
-
 var resolve                   = require("path").resolve;
 
 var format                    = require("util").format;
@@ -19,6 +17,7 @@ var getJsonOutput             = require("../lib/cliutil").getJsonOutput;
 
 var consts                    = require("../lib/consts");
 
+var DEFAULT_IMAGE             = "133263be-3c2c-11e3-8d3a-a30c43ae58fd";
 
 var SETUP_MACHINE_CMD         = resolve(__dirname, './stage-setup-machine');
 
@@ -34,7 +33,9 @@ var DEFAULT_OPTIONS           = { "machines"    : 1,
                                   "sdcAccount"  : process.env["SDC_ACCOUNT"],
                                   "sdcKeyId"    : process.env["SDC_KEY_ID"],
                                   "quiet"       : false,
-                                  "debug"       : true
+                                  "debug"       : true,
+                                  "privatekey"  : null,
+                                  "image"       : DEFAULT_IMAGE
                                 };
 
 
@@ -91,6 +92,10 @@ function main () {
       options.rtoken = args.shift();
       break;
 
+      case '--private-key':
+      options.privatekey = args.shift();
+      break;
+
       // SDC specific options
       case "--sdcurl":
       options.sdcUrl = args.shift();
@@ -102,6 +107,10 @@ function main () {
 
       case "--keyid":
       options.sdcKeyId = args.shift();
+      break;
+
+      case "--image":
+      options.image = args.shift();
       break;
 
       default:
@@ -149,6 +158,10 @@ function main () {
 
   if (options.rport !== null && isNaN(options.rport) && options.rport >= 0) {
     halt("--remote-port must be a positive number");
+  }
+
+  if (!options.privatekey) {
+    halt("--private-key is mandatory");
   }
 
   if (options.type == "slave" && options.rurl === null) {
@@ -218,21 +231,19 @@ function createAndSetupMachines (count, C) {
   (function next (count) {
     var info;
 
-    function oncreated (err, info) {
+    function onipconfigured (err, info) {
       var addr;
       var user;
-      var pass;
       var args;
       var child;
       var cmd;
 
       if (err) return C(err);
 
-      addr = info.primaryIp;
-      user = "admin";
-      pass = info.metadata.credentials.admin;
+      addr = info.ips[0];
+      user = "root";
 
-      log("Machine '%s' (ip: %s) was created...", info.id, addr);
+      log("Machine '%s' (ip: %s) is now configured...", info.id, addr);
 
       cmd = SETUP_MACHINE_CMD + " " + options.type;
       args = [];
@@ -265,14 +276,17 @@ function createAndSetupMachines (count, C) {
         args.push("--quiet");
       }
 
+      args.push("--private-key", options.privatekey);
+
+      args.push("--init-command", '"pkgin -y install gmake"');
+
       info = {
         address     : addr,
         username    : user,
-        password    : pass,
         port        : options.rport
       };
 
-      args.push('"' + user + ":" + pass + "@" + addr + '"');
+      args.push('"' + user + "@" + addr + '"');
 
       cmd += " " + args.join(" ");
 
@@ -280,7 +294,13 @@ function createAndSetupMachines (count, C) {
 
       child = exec(cmd, onsetupdone);
       child.stdout.pipe(process.stdout);
-      child.stderr.pipe(process.stderr);
+      child.stderr.pipe(process.stderr);      
+    }
+
+    function oncreated (err, info) {
+      if (err) return C(err);
+      log("Machine '%s' created, waiting for IP to be configured...", info.id);
+      waitForIpConfiguration(info.id, onipconfigured);
     }
 
     function onsetupdone (err) {
@@ -290,9 +310,33 @@ function createAndSetupMachines (count, C) {
       return C(null, result);
     }
 
-    exec("sdc-createmachine", getJsonOutput(oncreated));
+    exec("sdc-createmachine -e " + options.image, getJsonOutput(oncreated));
 
   })(count - 1);
+}
+
+
+function waitForIpConfiguration (machineid, C) {
+  (function loop (err, list) {
+    var info;
+
+    if (err || list) {
+      if (err) return C(err);
+      for (var i = 0; i < list.length; i++) {
+        info = list[i];
+        if (info.id == machineid) {
+          if (info.ips.length) {
+            return C(null, info);
+          }
+        }
+      }
+    }
+
+    setTimeout(function () {
+      debug("Executing list machines");
+      exec("sdc-listmachines", getJsonOutput(loop));
+    }, 5000);
+  }());
 }
 
 
